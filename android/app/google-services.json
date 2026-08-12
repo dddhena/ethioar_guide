@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "158270908028",
+    "project_id": "ar-based-tourist-guide",
+    "storage_bucket": "ar-based-tourist-guide.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:158270908028:android:72ed43097cc9e7f3f30bf9",
+        "android_client_info": {
+          "package_name": "com.example.ethioar_guide"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfPIFkI13pUj0rt4lBoJY85vSjK4etwuA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
