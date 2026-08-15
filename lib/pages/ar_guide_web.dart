@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/firestore_service.dart';
 import '../models/landmark.dart';
+import 'map_picker.dart';
+import 'landmarks_page.dart';
 
 class ARGuidePage extends StatefulWidget {
   const ARGuidePage({Key? key}) : super(key: key);
@@ -29,7 +32,16 @@ class _ARGuidePageState extends State<ARGuidePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('AR Tourist Guide (Web)')),
+      appBar: AppBar(
+        title: const Text('AR Tourist Guide (Web)'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.list),
+            tooltip: 'View landmarks',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LandmarksPage())),
+          )
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
@@ -53,7 +65,24 @@ class _ARGuidePageState extends State<ARGuidePage> {
                           child: ListTile(
                             title: Text(lm.name),
                             subtitle: Text(lm.description),
-                            trailing: Text('${lm.latitude.toStringAsFixed(3)}, ${lm.longitude.toStringAsFixed(3)}'),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('${lm.latitude.toStringAsFixed(3)}, ${lm.longitude.toStringAsFixed(3)}'),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.map),
+                                  onPressed: () {
+                                    Navigator.of(context).push(MaterialPageRoute(
+                                      builder: (_) => MapPickerPage(
+                                        initialPosition: LatLng(lm.latitude, lm.longitude),
+                                        readOnly: true,
+                                      ),
+                                    ));
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },

@@ -5,8 +5,10 @@ import 'package:ar_flutter_plugin/managers/ar_object_manager.dart';
 import 'package:ar_flutter_plugin/managers/ar_anchor_manager.dart';
 import 'package:ar_flutter_plugin/managers/ar_location_manager.dart';
 import 'package:vector_math/vector_math_64.dart' as vm;
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/firestore_service.dart';
 import '../models/landmark.dart';
+import 'landmarks_page.dart';
 
 class ARGuidePage extends StatefulWidget {
   const ARGuidePage({Key? key}) : super(key: key);
@@ -82,7 +84,16 @@ class _ARGuidePageState extends State<ARGuidePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('AR Tourist Guide')),
+      appBar: AppBar(
+        title: const Text('AR Tourist Guide'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.list),
+            tooltip: 'View landmarks',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LandmarksPage())),
+          )
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Stack(
