@@ -6,6 +6,7 @@ import '../services/firestore_service.dart';
 import '../widgets/app_scaffold.dart';
 import 'camera_preview.dart';
 import 'map_picker.dart';
+import 'landmarks_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -89,6 +90,12 @@ class _DashboardPageState extends State<DashboardPage> {
                   icon: const Icon(Icons.explore),
                   label: const Text('AR Tourist Guide'),
                   onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CameraPreviewPage())),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.list),
+                  label: const Text('View Landmarks'),
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LandmarksPage())),
                 ),
                 const SizedBox(height: 12),
                 if (_role == 'admin') ...[
