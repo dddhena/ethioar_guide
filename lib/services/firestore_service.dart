@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/landmark.dart';
+import '../models/user_profile.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -8,36 +9,67 @@ class FirestoreService {
   /// Creates a user profile document in `users/{uid}` with an optional role.
   Future<void> createUserProfile(String uid, String name, String email, {String role = 'user'}) async {
     await _db.collection('users').doc(uid).set({
-      'name': name,
-      'email': email,
+      'name': name.trim(),
+      'email': email.trim(),
       'role': role,
+      'phone': '',
+      'bio': '',
+      'country': '',
+      'avatar': 'default',
       'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  /// Fetch the full user profile from Firestore.
-  Future<Map<String, dynamic>> getUserProfile(String uid) async {
+  /// Fetch the full user profile model from Firestore.
+  Future<UserProfile> getUserProfileModel(String uid) async {
     try {
       final doc = await _db.collection('users').doc(uid).get();
-      if (!doc.exists) {
-        return {'name': 'Guest', 'email': '', 'role': 'user'};
+      if (!doc.exists || doc.data() == null) {
+        return UserProfile(uid: uid, name: 'Guest', email: '', role: 'user');
       }
-      final data = doc.data() ?? {};
-      return {
-        'name': data['name'] ?? 'Guest',
-        'email': data['email'] ?? '',
-        'role': data['role'] ?? 'user',
-      };
+      return UserProfile.fromMap(uid, doc.data()!);
     } catch (_) {
-      // Firestore rules or connectivity may block access; fall back to a safe default.
-      return {'name': 'Guest', 'email': '', 'role': 'user'};
+      return UserProfile(uid: uid, name: 'Guest', email: '', role: 'user');
     }
+  }
+
+  /// Real-time stream of the user's profile.
+  Stream<UserProfile> getUserProfileStream(String uid) {
+    return _db.collection('users').doc(uid).snapshots().map((doc) {
+      if (!doc.exists || doc.data() == null) {
+        return UserProfile(uid: uid, name: 'Guest', email: '', role: 'user');
+      }
+      return UserProfile.fromMap(uid, doc.data()!);
+    });
+  }
+
+  /// Update user profile in Firestore.
+  Future<void> updateUserProfile(UserProfile profile) async {
+    await _db.collection('users').doc(profile.uid).set(
+      profile.toMap(),
+      SetOptions(merge: true),
+    );
+  }
+
+  /// Fetch the user profile as a Map from Firestore (for backwards compatibility).
+  Future<Map<String, dynamic>> getUserProfile(String uid) async {
+    final profile = await getUserProfileModel(uid);
+    return {
+      'name': profile.name.isEmpty ? 'Guest' : profile.name,
+      'email': profile.email,
+      'role': profile.role,
+      'phone': profile.phone,
+      'bio': profile.bio,
+      'country': profile.country,
+      'avatar': profile.avatar,
+    };
   }
 
   /// Fetch a user's role (returns 'user' if not set).
   Future<String> getUserRole(String uid) async {
-    final profile = await getUserProfile(uid);
-    return profile['role'] as String? ?? 'user';
+    final profile = await getUserProfileModel(uid);
+    return profile.role;
   }
 
   /// List all users (admin helper).

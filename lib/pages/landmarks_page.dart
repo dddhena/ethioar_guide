@@ -4,10 +4,11 @@ import '../services/firestore_service.dart';
 import '../services/auth_service.dart';
 import '../models/landmark.dart';
 import 'map_picker.dart';
-import 'dashboard_page.dart'; // for AddLandmarkPage
+import 'admin_pages.dart'; // Import AddLandmarkPage
+import 'nearby_landmarks_page.dart';
 
 class LandmarksPage extends StatefulWidget {
-  const LandmarksPage({Key? key}) : super(key: key);
+  const LandmarksPage({super.key});
 
   @override
   State<LandmarksPage> createState() => _LandmarksPageState();
@@ -58,7 +59,18 @@ class _LandmarksPageState extends State<LandmarksPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Landmarks')),
+      appBar: AppBar(
+        title: const Text('Landmarks Catalog'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.near_me),
+            tooltip: 'View Nearby Landmarks',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NearbyLandmarksPage()),
+            ),
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(

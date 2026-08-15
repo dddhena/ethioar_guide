@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'firestore_service.dart';
 
 class AuthService {
@@ -23,6 +22,7 @@ class AuthService {
     required String name,
     required String email,
     required String password,
+    String role = 'tourist',
   }) async {
     final auth = _firebaseAuth;
     if (auth == null) {
@@ -37,8 +37,7 @@ class AuthService {
     final user = cred.user;
     if (user != null) {
       await user.updateDisplayName(name);
-      // default role is 'user' on registration
-      await FirestoreService().createUserProfile(user.uid, name, email, role: 'user');
+      await FirestoreService().createUserProfile(user.uid, name, email, role: role);
     }
     return user;
   }
@@ -56,5 +55,46 @@ class AuthService {
     await auth.signOut();
   }
 
+  /// Update the current user's display name in Firebase Auth.
+  Future<void> updateDisplayName(String name) async {
+    final user = _firebaseAuth?.currentUser;
+    if (user != null) {
+      await user.updateDisplayName(name.trim());
+      await user.reload();
+    }
+  }
+
+  /// Change password for currently signed in user, re-authenticating first.
+  Future<void> updatePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _firebaseAuth?.currentUser;
+    if (user == null || user.email == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'No user is currently signed in.',
+      );
+    }
+
+    // Re-authenticate user before updating sensitive credentials
+    final cred = EmailAuthProvider.credential(
+      email: user.email!,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(cred);
+    await user.updatePassword(newPassword);
+  }
+
+  /// Send password reset link to user's email
+  Future<void> sendPasswordResetEmail(String email) async {
+    final auth = _firebaseAuth;
+    if (auth == null) return;
+    await auth.sendPasswordResetEmail(email: email.trim());
+  }
+
   User? get currentUser => _firebaseAuth?.currentUser;
+
+  Stream<User?> get authStateChanges =>
+      _firebaseAuth?.authStateChanges() ?? const Stream.empty();
 }

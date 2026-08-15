@@ -4,6 +4,13 @@ import 'firebase_options.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
 import 'pages/dashboard_page.dart';
+import 'pages/profile_page.dart';
+import 'pages/nearby_landmarks_page.dart';
+import 'pages/providers/service_providers_list_page.dart';
+import 'pages/providers/my_reservations_page.dart';
+import 'pages/providers/register_provider_page.dart';
+import 'pages/providers/provider_dashboard_page.dart';
+import 'pages/providers/admin_providers_page.dart';
 // This app expects you to run `flutterfire configure` locally to generate
 // lib/firebase_options.dart with DefaultFirebaseOptions. After that the app
 // initializes Firebase for all supported platforms using the generated options.
@@ -14,7 +21,7 @@ void main() {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -83,6 +90,13 @@ class _MyAppState extends State<MyApp> {
             '/login': (_) => const LoginPage(),
             '/register': (_) => const RegisterPage(),
             '/dashboard': (_) => const DashboardPage(),
+            '/profile': (_) => const ProfilePage(),
+            '/nearby': (_) => const NearbyLandmarksPage(),
+            '/services': (_) => const ServiceProvidersListPage(),
+            '/my-reservations': (_) => const MyReservationsPage(),
+            '/provider-dashboard': (_) => const ProviderDashboardPage(),
+            '/register-provider': (_) => const RegisterProviderPage(),
+            '/admin-providers': (_) => const AdminProvidersPage(),
           },
         );
       },
