@@ -60,7 +60,7 @@ class _LandmarksPageState extends State<LandmarksPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Landmarks Catalog'),
+        title: const Text('Landmark Management'),
         actions: [
           IconButton(
             icon: const Icon(Icons.near_me),
@@ -73,64 +73,72 @@ class _LandmarksPageState extends State<LandmarksPage> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView.builder(
-                itemCount: _landmarks.length,
-                itemBuilder: (context, i) {
-                  final lm = _landmarks[i];
-                  return Card(
-                    child: ListTile(
-                      title: Text(lm.name),
-                      subtitle: Text(lm.description),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.map),
-                            tooltip: 'View on map',
-                            onPressed: () {
-                              Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => MapPickerPage(
-                                  initialPosition: LatLng(lm.latitude, lm.longitude),
-                                  readOnly: true,
-                                ),
-                              ));
-                            },
-                          ),
-                          if (_role == 'admin') ...[
-                            IconButton(
-                              icon: const Icon(Icons.edit),
-                              tooltip: 'Edit',
-                              onPressed: () async {
-                                final res = await Navigator.of(context).push<bool>(
-                                  MaterialPageRoute(builder: (_) => AddLandmarkPage(landmark: lm, id: lm.id)),
-                                );
-                                if (res == true) await _load();
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              tooltip: 'Delete',
-                              onPressed: () => _delete(lm.id),
-                            ),
-                          ],
-                        ],
-                      ),
+          : Column(
+              children: [
+                if (_role == 'admin')
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add New Landmark'),
+                      onPressed: () async {
+                        final res = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const AddLandmarkPage()));
+                        if (res == true) await _load();
+                      },
                     ),
-                  );
-                },
-              ),
+                  ),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _load,
+                    child: ListView.builder(
+                      itemCount: _landmarks.length,
+                      itemBuilder: (context, i) {
+                        final lm = _landmarks[i];
+                        return Card(
+                          child: ListTile(
+                            title: Text(lm.name),
+                            subtitle: Text(lm.description),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.map),
+                                  tooltip: 'View on map',
+                                  onPressed: () {
+                                    Navigator.of(context).push(MaterialPageRoute(
+                                      builder: (_) => MapPickerPage(
+                                        initialPosition: LatLng(lm.latitude, lm.longitude),
+                                        readOnly: true,
+                                      ),
+                                    ));
+                                  },
+                                ),
+                                if (_role == 'admin') ...[
+                                  IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    tooltip: 'Edit',
+                                    onPressed: () async {
+                                      final res = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => AddLandmarkPage(landmark: lm, id: lm.id)));
+                                      if (res == true) await _load();
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    tooltip: 'Delete',
+                                    onPressed: () => _delete(lm.id),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
-      floatingActionButton: _role == 'admin'
-          ? FloatingActionButton(
-              child: const Icon(Icons.add),
-              onPressed: () async {
-                final res = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const AddLandmarkPage()));
-                if (res == true) await _load();
-              },
-            )
-          : null,
+        floatingActionButton: null,
     );
   }
 }

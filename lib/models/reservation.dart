@@ -1,146 +1,122 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Reservation {
-  final String id;
+  final String id; // reservationId
   final String touristId;
-  final String touristName;
-  final String touristEmail;
-  final String touristPhone;
   final String providerId;
-  final String providerName;
   final String serviceId;
-  final String serviceName;
-  final String serviceType; // 'hotel', 'restaurant', 'transport'
+  final String serviceType;
   final DateTime checkInDate;
   final DateTime? checkOutDate;
   final int numberOfGuests;
   final double totalAmount;
-  final String specialRequests;
-  final String status; // 'pending', 'confirmed', 'declined', 'completed', 'cancelled'
+  final String status; // e.g., 'pending', 'confirmed', 'completed', 'cancelled'
   final DateTime? createdAt;
+  final String paymentId; // reference to Payment document
+  // Optional UI fields (populated lazily)
+  final String serviceName;
+  final String providerName;
+  final String touristName;
+  final String touristPhone;
+  final String touristEmail;
+  final String specialRequests;
 
   Reservation({
     required this.id,
     required this.touristId,
-    required this.touristName,
-    required this.touristEmail,
-    this.touristPhone = '',
     required this.providerId,
-    required this.providerName,
     required this.serviceId,
-    required this.serviceName,
     required this.serviceType,
     required this.checkInDate,
     this.checkOutDate,
     this.numberOfGuests = 1,
     this.totalAmount = 0.0,
-    this.specialRequests = '',
     this.status = 'pending',
     this.createdAt,
+    this.paymentId = '',
+    this.serviceName = '',
+    this.providerName = '',
+    this.touristName = '',
+    this.touristPhone = '',
+    this.touristEmail = '',
+    this.specialRequests = '',
   });
 
-  bool get isPending => status.toLowerCase() == 'pending';
-  bool get isConfirmed => status.toLowerCase() == 'confirmed';
-  bool get isDeclined => status.toLowerCase() == 'declined';
-  bool get isCancelled => status.toLowerCase() == 'cancelled';
-
-  String get formattedTotal => '${totalAmount.toStringAsFixed(0)} ETB';
-
-  String get formattedDates {
-    final start = '${checkInDate.day}/${checkInDate.month}/${checkInDate.year}';
-    if (checkOutDate != null) {
-      final end = '${checkOutDate!.day}/${checkOutDate!.month}/${checkOutDate!.year}';
-      return '$start ➔ $end';
-    }
-    return start;
-  }
-
   factory Reservation.fromMap(String id, Map<String, dynamic> map) {
-    DateTime parseDate(dynamic val, [DateTime? fallback]) {
+    DateTime parse(dynamic val) {
       if (val is Timestamp) return val.toDate();
-      if (val is String) return DateTime.tryParse(val) ?? (fallback ?? DateTime.now());
-      return fallback ?? DateTime.now();
+      if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
+      return DateTime.now();
     }
-
     return Reservation(
       id: id,
       touristId: map['touristId'] as String? ?? '',
-      touristName: map['touristName'] as String? ?? 'Tourist',
-      touristEmail: map['touristEmail'] as String? ?? '',
-      touristPhone: map['touristPhone'] as String? ?? '',
       providerId: map['providerId'] as String? ?? '',
-      providerName: map['providerName'] as String? ?? 'Provider',
       serviceId: map['serviceId'] as String? ?? '',
-      serviceName: map['serviceName'] as String? ?? 'Service',
-      serviceType: map['serviceType'] as String? ?? 'hotel',
-      checkInDate: parseDate(map['checkInDate']),
-      checkOutDate: map['checkOutDate'] != null ? parseDate(map['checkOutDate']) : null,
+      serviceType: map['serviceType'] as String? ?? '',
+      checkInDate: parse(map['checkInDate']),
+      checkOutDate: map['checkOutDate'] != null ? parse(map['checkOutDate']) : null,
       numberOfGuests: (map['numberOfGuests'] ?? 1) as int,
       totalAmount: (map['totalAmount'] ?? 0.0).toDouble(),
-      specialRequests: map['specialRequests'] as String? ?? '',
       status: map['status'] as String? ?? 'pending',
-      createdAt: map['createdAt'] != null ? parseDate(map['createdAt']) : null,
+      createdAt: map['createdAt'] != null ? parse(map['createdAt']) : null,
+      paymentId: map['paymentId'] as String? ?? '',
+      // optional UI fields
+      serviceName: (map['serviceName'] as String?) ?? '',
+      providerName: (map['providerName'] as String?) ?? '',
+      touristName: (map['touristName'] as String?) ?? '',
+      touristPhone: (map['touristPhone'] as String?) ?? '',
+      touristEmail: (map['touristEmail'] as String?) ?? '',
+      specialRequests: (map['specialRequests'] as String?) ?? '',
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'touristId': touristId,
-      'touristName': touristName.trim(),
-      'touristEmail': touristEmail.trim(),
-      'touristPhone': touristPhone.trim(),
       'providerId': providerId,
-      'providerName': providerName.trim(),
       'serviceId': serviceId,
-      'serviceName': serviceName.trim(),
       'serviceType': serviceType,
       'checkInDate': Timestamp.fromDate(checkInDate),
       'checkOutDate': checkOutDate != null ? Timestamp.fromDate(checkOutDate!) : null,
       'numberOfGuests': numberOfGuests,
       'totalAmount': totalAmount,
-      'specialRequests': specialRequests.trim(),
       'status': status,
+      'paymentId': paymentId,
+      // optional UI fields
+      'serviceName': serviceName,
+      'providerName': providerName,
+      'touristName': touristName,
+      'touristPhone': touristPhone,
+      'touristEmail': touristEmail,
+      'specialRequests': specialRequests,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
 
-  Reservation copyWith({
-    String? id,
-    String? touristId,
-    String? touristName,
-    String? touristEmail,
-    String? touristPhone,
-    String? providerId,
-    String? providerName,
-    String? serviceId,
-    String? serviceName,
-    String? serviceType,
-    DateTime? checkInDate,
-    DateTime? checkOutDate,
-    int? numberOfGuests,
-    double? totalAmount,
-    String? specialRequests,
-    String? status,
-    DateTime? createdAt,
-  }) {
-    return Reservation(
-      id: id ?? this.id,
-      touristId: touristId ?? this.touristId,
-      touristName: touristName ?? this.touristName,
-      touristEmail: touristEmail ?? this.touristEmail,
-      touristPhone: touristPhone ?? this.touristPhone,
-      providerId: providerId ?? this.providerId,
-      providerName: providerName ?? this.providerName,
-      serviceId: serviceId ?? this.serviceId,
-      serviceName: serviceName ?? this.serviceName,
-      serviceType: serviceType ?? this.serviceType,
-      checkInDate: checkInDate ?? this.checkInDate,
-      checkOutDate: checkOutDate ?? this.checkOutDate,
-      numberOfGuests: numberOfGuests ?? this.numberOfGuests,
-      totalAmount: totalAmount ?? this.totalAmount,
-      specialRequests: specialRequests ?? this.specialRequests,
-      status: status ?? this.status,
-      createdAt: createdAt ?? this.createdAt,
-    );
+  // UI helper getters
+  String get formattedDates {
+    final checkIn = '${checkInDate.day}/${checkInDate.month}/${checkInDate.year}';
+    if (checkOutDate != null) {
+      final checkOut = '${checkOutDate!.day}/${checkOutDate!.month}/${checkOutDate!.year}';
+      return '$checkIn - $checkOut';
+    }
+    return checkIn;
+  }
+
+  String get formattedTotal {
+    return '\$${totalAmount.toStringAsFixed(2)}';
+  }
+
+  bool get isPending {
+    return status == 'pending';
+  }
+
+  bool get isConfirmed {
+    return status == 'confirmed';
+  }
+
+  bool get isDeclined {
+    return status == 'declined';
   }
 }

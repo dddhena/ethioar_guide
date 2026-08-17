@@ -1,8 +1,9 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/service_provider.dart';
 import '../models/provider_service.dart';
 import '../models/reservation.dart';
+import '../models/payment.dart';
+import 'notification_service.dart';
 
 class ServiceProviderService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -177,10 +178,61 @@ class ServiceProviderService {
   // RESERVATIONS & BOOKINGS
   // ==========================================
 
-  /// Tourist creates a service reservation.
+  /// Tourist creates a service reservation and optionally links a payment.
   Future<String> createReservation(Reservation reservation) async {
     final docRef = await _db.collection('reservations').add(reservation.toMap());
-    return docRef.id;
+    final resId = docRef.id;
+
+    // Send in-app notification to the Tourist
+    try {
+      if (reservation.touristId.isNotEmpty) {
+        await NotificationService().sendNotification(
+          userId: reservation.touristId,
+          title: 'Reservation Placed 🛎️',
+          message: 'Your booking request for ${reservation.serviceName.isNotEmpty ? reservation.serviceName : 'Service'} at ${reservation.providerName.isNotEmpty ? reservation.providerName : 'Provider'} has been submitted.',
+          type: 'booking_created',
+          relatedId: resId,
+        );
+      }
+
+      // Send in-app notification to the Service Provider
+      if (reservation.providerId.isNotEmpty) {
+        // Find provider's user account ID if different from providerId
+        final provDoc = await _db.collection('service_providers').doc(reservation.providerId).get();
+        final provUserId = provDoc.data()?['userId'] as String? ?? reservation.providerId;
+        
+        await NotificationService().sendNotification(
+          userId: provUserId,
+          title: 'New Reservation Request! 📅',
+          message: '${reservation.touristName.isNotEmpty ? reservation.touristName : 'A tourist'} requested a booking for ${reservation.serviceName.isNotEmpty ? reservation.serviceName : 'Service'}.',
+          type: 'booking_created',
+          relatedId: resId,
+        );
+      }
+    } catch (_) {}
+
+    return resId;
+  }
+
+  /// Record a payment in Firestore and trigger notifications.
+  Future<String> createPayment(Payment payment) async {
+    final docRef = await _db.collection('payments').add(payment.toMap());
+    final paymentId = docRef.id;
+
+    // Notify user of successful payment
+    try {
+      if (payment.userId.isNotEmpty) {
+        await NotificationService().sendNotification(
+          userId: payment.userId,
+          title: 'Payment Successful 💳',
+          message: 'Payment of ${payment.formattedAmount} via ${payment.formattedMethod} (Tx: ${payment.transactionId}) was successful.',
+          type: 'payment_success',
+          relatedId: payment.bookingId,
+        );
+      }
+    } catch (_) {}
+
+    return paymentId;
   }
 
   /// Provider confirms, declines, or completes a reservation.
@@ -189,17 +241,99 @@ class ServiceProviderService {
       'status': status,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    // Notify the tourist about status change
+    try {
+      final doc = await _db.collection('reservations').doc(reservationId).get();
+      if (doc.exists && doc.data() != null) {
+        final r = Reservation.fromMap(doc.id, doc.data()!);
+        if (r.touristId.isNotEmpty) {
+          final isConf = status == 'confirmed';
+          final isDecl = status == 'declined';
+          final title = isConf
+              ? '🎉 Reservation Confirmed!'
+              : isDecl
+                  ? '⚠️ Reservation Update'
+                  : 'Reservation Status: ${status.toUpperCase()}';
+          final msg = isConf
+              ? 'Great news! ${r.providerName.isNotEmpty ? r.providerName : 'The provider'} has confirmed your reservation for ${r.serviceName}.'
+              : isDecl
+                  ? 'Your reservation request for ${r.serviceName} was declined by the provider.'
+                  : 'Your reservation is now $status.';
+          
+          await NotificationService().sendNotification(
+            userId: r.touristId,
+            title: title,
+            message: msg,
+            type: isConf ? 'reservation_confirmed' : isDecl ? 'reservation_declined' : 'reservation_update',
+            relatedId: reservationId,
+          );
+        }
+      }
+    } catch (_) {}
   }
 
-  /// Stream of reservations for a specific provider business.
-  Stream<List<Reservation>> getProviderReservationsStream(String providerId) {
+  /// Stream of reservations for a specific provider business or provider user account.
+  Stream<List<Reservation>> getProviderReservationsStream(String providerIdOrUserId) {
+    if (providerIdOrUserId.isEmpty) return Stream.value([]);
+
+    return _db.collection('reservations').snapshots().asyncMap((snapshot) async {
+      final Set<String> targetIds = {providerIdOrUserId};
+      try {
+        final provDocs = await _db
+            .collection('service_providers')
+            .where('userId', isEqualTo: providerIdOrUserId)
+            .get();
+        for (final doc in provDocs.docs) {
+          targetIds.add(doc.id);
+        }
+      } catch (_) {}
+
+      final list = snapshot.docs
+          .map((d) => Reservation.fromMap(d.id, d.data()))
+          .where((r) => targetIds.contains(r.providerId))
+          .toList();
+
+      list.sort((a, b) => (b.createdAt ?? DateTime.now()).compareTo(a.createdAt ?? DateTime.now()));
+      return list;
+    });
+  }
+
+  /// Stream of payments for a specific provider business or provider user account.
+  Stream<List<Payment>> getProviderPaymentsStream(String providerIdOrUserId) {
+    if (providerIdOrUserId.isEmpty) return Stream.value([]);
+
+    return _db.collection('payments').snapshots().asyncMap((snapshot) async {
+      final Set<String> targetIds = {providerIdOrUserId};
+      try {
+        final provDocs = await _db
+            .collection('service_providers')
+            .where('userId', isEqualTo: providerIdOrUserId)
+            .get();
+        for (final doc in provDocs.docs) {
+          targetIds.add(doc.id);
+        }
+      } catch (_) {}
+
+      final list = snapshot.docs
+          .map((d) => Payment.fromMap(d.id, d.data()))
+          .where((p) => targetIds.contains(p.providerId))
+          .toList();
+
+      list.sort((a, b) => (b.createdAt ?? DateTime.now()).compareTo(a.createdAt ?? DateTime.now()));
+      return list;
+    });
+  }
+
+  /// Stream of payments made by a tourist user.
+  Stream<List<Payment>> getTouristPaymentsStream(String userId) {
     return _db
-        .collection('reservations')
-        .where('providerId', isEqualTo: providerId)
+        .collection('payments')
+        .where('userId', isEqualTo: userId)
         .snapshots()
         .map((snapshot) {
       final list = snapshot.docs
-          .map((d) => Reservation.fromMap(d.id, d.data()))
+          .map((d) => Payment.fromMap(d.id, d.data()))
           .toList();
       list.sort((a, b) => (b.createdAt ?? DateTime.now()).compareTo(a.createdAt ?? DateTime.now()));
       return list;

@@ -11,12 +11,20 @@ import 'nearby_landmarks_page.dart';
 import 'providers/service_providers_list_page.dart';
 import 'providers/my_reservations_page.dart';
 import 'providers/provider_dashboard_page.dart';
+import 'providers/provider_reservations_page.dart';
+import 'providers/provider_payments_page.dart';
+import 'providers/provider_notifications_page.dart';
 import 'providers/admin_providers_page.dart';
-import 'admin_pages.dart';
-import 'providers/service_providers_list_page.dart';
-import 'providers/my_reservations_page.dart';
-import 'providers/provider_dashboard_page.dart';
-import 'providers/admin_providers_page.dart';
+import 'tourist_payments_page.dart';
+import '../widgets/notification_bell_button.dart';
+import '../widgets/chat_icon_button.dart';
+import 'chat/conversations_list_page.dart';
+import 'emergency/emergency_sos_dialog.dart';
+import 'admin/admin_emergency_dashboard.dart';
+import 'guides/guide_dashboard_page.dart';
+import 'guides/guides_list_page.dart';
+import 'guides/my_guide_bookings_page.dart';
+
 import 'admin_pages.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -143,8 +151,24 @@ class _DashboardPageState extends State<DashboardPage> {
 
   // ── Role-gated content sections ────────────────────────────────────────────
 
-  /// 🧭 Tourist: AR guide, nearby, hotels/dining/transport, reservations, catalog
+  /// 🧭 Tourist: AR guide, emergency SOS, nearby, hotels/dining/transport, reservations, messages, catalog
   List<Widget> get _touristSection => [
+        _sectionHeader('Emergency & Safe Travel'),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              backgroundColor: Colors.red.shade700,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.emergency, size: 22),
+            label: const Text('🚨 Emergency SOS Alert (1-Tap Help)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            onPressed: () => EmergencySosDialog.show(context),
+          ),
+        ),
+
         _sectionHeader('Explore & Experience Ethiopia'),
         _primaryBtn(
           icon: Icons.explore,
@@ -166,11 +190,36 @@ class _DashboardPageState extends State<DashboardPage> {
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const ServiceProvidersListPage())),
         ),
+        _primaryBtn(
+          icon: Icons.hiking,
+          label: '🗺️ Find a Tour Guide',
+          color: Colors.green.shade800,
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const GuidesListPage())),
+        ),
+        _outlineBtn(
+          icon: Icons.chat_outlined,
+          label: '💬 Messages & Tour Guide Chat',
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const ConversationsListPage())),
+        ),
         _outlineBtn(
           icon: Icons.bookmark_border,
           label: '📅 My Reservations',
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const MyReservationsPage())),
+        ),
+        _outlineBtn(
+          icon: Icons.tour,
+          label: '🗺️ My Guide Bookings',
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const MyGuideBookingsPage())),
+        ),
+        _outlineBtn(
+          icon: Icons.account_balance_wallet_outlined,
+          label: '💳 My Payments & Receipts',
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const TouristPaymentsPage())),
         ),
         _outlineBtn(
           icon: Icons.list,
@@ -180,9 +229,23 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       ];
 
-  /// 🗺️ Tour Guide: AR guide, nearby landmarks, landmarks catalog
+  /// 🗺️ Tour Guide: profile, tours, availability, bookings, messages
   List<Widget> get _tourGuideSection => [
-        _sectionHeader('Tour Guide Toolkit'),
+        _sectionHeader('Tour Guide Portal'),
+        _primaryBtn(
+          icon: Icons.dashboard,
+          label: '🗺️ Tour Guide Dashboard',
+          color: Colors.green.shade800,
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const GuideDashboardPage())),
+        ),
+        _primaryBtn(
+          icon: Icons.chat,
+          label: '💬 Messages',
+          color: Colors.teal.shade800,
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const ConversationsListPage())),
+        ),
         _primaryBtn(
           icon: Icons.explore,
           label: 'AR Tourist Guide',
@@ -212,13 +275,66 @@ class _DashboardPageState extends State<DashboardPage> {
           label: '🏢 My Business Dashboard',
           color: Colors.blue.shade800,
           onPressed: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const ProviderDashboardPage())),
+              .push(MaterialPageRoute(builder: (_) => ProviderDashboardPage())),
+        ),
+        _primaryBtn(
+          icon: Icons.chat,
+          label: '💬 Messages & Inquiries',
+          color: Colors.indigo.shade700,
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const ConversationsListPage())),
+        ),
+        _primaryBtn(
+          icon: Icons.inbox,
+          label: '📥 Reservations',
+          color: Colors.teal.shade700,
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const ProviderReservationsPage())),
+        ),
+        _primaryBtn(
+          icon: Icons.attach_money,
+          label: '💰 Payments',
+          color: Colors.green.shade700,
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const ProviderPaymentsPage())),
+        ),
+        _primaryBtn(
+          icon: Icons.notifications,
+          label: '🔔 Notifications',
+          color: Colors.orange.shade700,
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const ProviderNotificationsPage())),
         ),
       ];
 
-  /// 👑 Admin: user management, verify providers, add landmarks
+  /// 👑 Admin: user management, verify providers, emergency SOS monitor, add landmarks
   List<Widget> get _adminSection => [
+        _sectionHeader('Emergency & Security Command', color: Colors.red.shade900),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              backgroundColor: Colors.red.shade800,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.warning_amber),
+            label: const Text('🚨 Live Emergency SOS Monitor',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            onPressed: () =>
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminEmergencyDashboard())),
+          ),
+        ),
+
         _sectionHeader('Administration', color: Colors.amber.shade900),
+        _primaryBtn(
+          icon: Icons.support_agent,
+          label: '💬 Support Desk Messages',
+          color: Colors.amber.shade900,
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const ConversationsListPage())),
+        ),
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: ElevatedButton.icon(
@@ -248,7 +364,7 @@ class _DashboardPageState extends State<DashboardPage> {
             label: const Text('Verify Service Providers',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             onPressed: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const AdminProvidersPage())),
+                .push(MaterialPageRoute(builder: (_) => AdminProvidersPage())),
           ),
         ),
         Padding(
@@ -264,7 +380,7 @@ class _DashboardPageState extends State<DashboardPage> {
             label: const Text('Add / Manage Landmarks',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             onPressed: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const AddLandmarkPage())),
+                .push(MaterialPageRoute(builder: (_) => const LandmarksPage())),
           ),
         ),
       ];
@@ -276,6 +392,8 @@ class _DashboardPageState extends State<DashboardPage> {
     return AppScaffold(
       title: 'Dashboard',
       actions: [
+        const ChatIconButton(),
+        const NotificationBellButton(),
         IconButton(
           icon: const Icon(Icons.account_circle),
           tooltip: 'My Profile',

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../../models/reservation.dart';
 import '../../services/auth_service.dart';
 import '../../services/service_provider_service.dart';
+import '../../services/chat_service.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/snackbar_helper.dart';
+import '../chat/chat_page.dart';
 
 class MyReservationsPage extends StatefulWidget {
   const MyReservationsPage({super.key});
@@ -15,6 +17,7 @@ class MyReservationsPage extends StatefulWidget {
 class _MyReservationsPageState extends State<MyReservationsPage> {
   final AuthService _auth = AuthService();
   final ServiceProviderService _service = ServiceProviderService();
+  final ChatService _chatService = ChatService();
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +84,7 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: list.length,
             itemBuilder: (context, i) {
-              return _buildReservationCard(list[i]);
+              return _buildReservationCard(list[i], user);
             },
           );
         },
@@ -89,7 +92,7 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
     );
   }
 
-  Widget _buildReservationCard(Reservation r) {
+  Widget _buildReservationCard(Reservation r, dynamic user) {
     Color statusBg;
     Color statusText;
     IconData statusIcon;
@@ -198,41 +201,76 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
                 style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12, color: Colors.grey.shade700),
               ),
             ],
-            if (r.isPending) ...[
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
-                  icon: const Icon(Icons.cancel_outlined, size: 16),
-                  label: const Text('Cancel Reservation'),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.teal.shade800,
+                    side: BorderSide(color: Colors.teal.shade300),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  ),
+                  icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                  label: const Text('Message Provider', style: TextStyle(fontSize: 12)),
                   onPressed: () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Cancel Reservation'),
-                        content: const Text('Are you sure you want to cancel this reservation request?'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('No')),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                            onPressed: () => Navigator.of(ctx).pop(true),
-                            child: const Text('Cancel Booking'),
-                          ),
-                        ],
-                      ),
+                    if (user == null) return;
+                    final conv = await _chatService.getOrCreateConversation(
+                      currentUserId: user.uid,
+                      currentUserName: user.displayName ?? 'Tourist',
+                      currentUserRole: 'tourist',
+                      otherUserId: r.providerId,
+                      otherUserName: r.providerName.isNotEmpty ? r.providerName : 'Service Provider',
+                      otherUserRole: 'provider',
+                      channelType: 'provider_tourist',
                     );
-
-                    if (confirm == true) {
-                      await _service.updateReservationStatus(r.id, 'cancelled');
-                      if (context.mounted) {
-                        SnackbarHelper.show(context, 'Reservation cancelled.');
-                      }
+                    if (context.mounted) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ChatPage(
+                            chatId: conv.id,
+                            otherUserId: r.providerId,
+                            otherUserName: r.providerName.isNotEmpty ? r.providerName : 'Service Provider',
+                            otherUserRole: 'provider',
+                            channelType: 'provider_tourist',
+                          ),
+                        ),
+                      );
                     }
                   },
                 ),
-              ),
-            ],
+                if (r.isPending)
+                  TextButton.icon(
+                    style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+                    icon: const Icon(Icons.cancel_outlined, size: 16),
+                    label: const Text('Cancel Request'),
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Cancel Reservation'),
+                          content: const Text('Are you sure you want to cancel this reservation request?'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('No')),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text('Cancel Booking'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true) {
+                        await _service.updateReservationStatus(r.id, 'cancelled');
+                        if (context.mounted) {
+                          SnackbarHelper.show(context, 'Reservation cancelled.');
+                        }
+                      }
+                    },
+                  ),
+              ],
+            ),
           ],
         ),
       ),

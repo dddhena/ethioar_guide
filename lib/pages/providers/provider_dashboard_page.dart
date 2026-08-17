@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../services/service_provider_service.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/snackbar_helper.dart';
+import '../../widgets/notification_bell_button.dart';
 import 'register_provider_page.dart';
 
 class ProviderDashboardPage extends StatefulWidget {
@@ -209,6 +210,7 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> with Sing
 
     return AppScaffold(
       title: 'Provider Portal',
+      actions: const [NotificationBellButton()],
       body: Column(
         children: [
           // Business Summary Header Card
