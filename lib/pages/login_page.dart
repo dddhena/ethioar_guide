@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
-import 'dashboard_page.dart';
 import 'register_page.dart';
+import 'tourist_home_router.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/snackbar_helper.dart';
 
@@ -28,7 +28,7 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text.trim(),
       );
       if (user != null) {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => DashboardPage()));
+        await TouristHomeRouter.navigateAfterLogin(context);
       } else {
         SnackbarHelper.show(context, 'Firebase not available or login failed');
       }

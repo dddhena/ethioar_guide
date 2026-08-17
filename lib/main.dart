@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'theme/ethio_theme.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
 import 'pages/dashboard_page.dart';
+import 'pages/journey/choose_journey_page.dart';
+import 'pages/journey/guided_journey_dashboard_page.dart';
+import 'pages/journey/ar_discovery_dashboard_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/nearby_landmarks_page.dart';
 import 'pages/providers/service_providers_list_page.dart';
@@ -84,12 +88,15 @@ class _MyAppState extends State<MyApp> {
         // Initialization succeeded — show the app
         return MaterialApp(
           title: 'EthioAR Guide',
-          theme: ThemeData(primarySwatch: Colors.teal),
+          theme: buildEthioTheme(),
           home: const HomeDecider(),
           routes: {
             '/login': (_) => const LoginPage(),
             '/register': (_) => const RegisterPage(),
             '/dashboard': (_) => const DashboardPage(),
+            '/choose-journey': (_) => const ChooseJourneyPage(),
+            '/guided-journey': (_) => const GuidedJourneyDashboardPage(),
+            '/ar-discovery': (_) => const ArDiscoveryDashboardPage(),
             '/profile': (_) => const ProfilePage(),
             '/nearby': (_) => const NearbyLandmarksPage(),
             '/services': (_) => const ServiceProvidersListPage(),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ar_flutter_plugin/ar_flutter_plugin.dart';
+import 'package:ar_flutter_plugin/datatypes/node_types.dart';
+import 'package:ar_flutter_plugin/models/ar_node.dart';
 import 'package:ar_flutter_plugin/managers/ar_session_manager.dart';
 import 'package:ar_flutter_plugin/managers/ar_object_manager.dart';
 import 'package:ar_flutter_plugin/managers/ar_anchor_manager.dart';
@@ -64,12 +66,14 @@ class _ARGuidePageState extends State<ARGuidePage> {
     }
 
     // When tapped, show a snackbar with info
-    arObjectManager.onNodeTap = (nodes) {
-      if (nodes.isEmpty) return;
-      final tapped = nodes.first;
-      final lm = nodeLandmark[tapped.name];
+    arObjectManager.onNodeTap = (nodeNames) {
+      if (nodeNames.isEmpty) return;
+      final tappedName = nodeNames.first;
+      final lm = nodeLandmark[tappedName];
       if (lm != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${lm.name}: ${lm.description}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${lm.name}: ${lm.description}')),
+        );
       }
     };
   }
