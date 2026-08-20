@@ -5,6 +5,7 @@ import '../../services/firestore_service.dart';
 import '../../services/journey_preference_service.dart';
 import '../../theme/ethio_theme.dart';
 import '../../widgets/chat_icon_button.dart';
+import '../../widgets/emergency_sos_button.dart';
 import '../../widgets/journey/dashboard_widgets.dart';
 import '../../widgets/journey/recommended_places_section.dart';
 import '../../widgets/notification_bell_button.dart';
@@ -12,6 +13,7 @@ import '../ai_guide_page.dart';
 import '../camera_preview.dart';
 import '../chat/conversations_list_page.dart';
 import '../dashboard_page.dart';
+import '../emergency/emergency_sos_dialog.dart';
 import '../explore_page.dart';
 import '../favorites_page.dart';
 import '../guides/guides_list_page.dart';
@@ -203,7 +205,9 @@ class _GuidedJourneyDashboardPageState extends State<GuidedJourneyDashboardPage>
         ),
         const SizedBox(height: 28),
         const RecommendedPlacesSection(title: 'RECOMMENDED PLACES'),
-        const SizedBox(height: 24),
+        const SizedBox(height: 18),
+        const EmergencyQuickCard(),
+        const SizedBox(height: 16),
         SwitchJourneyButton(label: 'Switch to AR Discovery', onTap: _switchToAr),
         const SizedBox(height: 8),
         Center(
@@ -224,6 +228,7 @@ class _GuidedJourneyDashboardPageState extends State<GuidedJourneyDashboardPage>
       appBar: AppBar(
         title: const Text('Guided Journey'),
         actions: [
+          const EmergencySosButton(),
           const ChatIconButton(color: EthioColors.charcoal),
           const NotificationBellButton(color: EthioColors.charcoal),
           IconButton(
@@ -293,6 +298,17 @@ class _GuidedJourneyDashboardPageState extends State<GuidedJourneyDashboardPage>
                   ),
                 ],
               ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.emergency_rounded, color: Colors.red),
+              title: const Text(
+                '🚨 Emergency SOS Help',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                EmergencySosDialog.show(context);
+              },
             ),
             ListTile(
               leading: const Icon(Icons.dashboard_outlined),
