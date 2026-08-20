@@ -18,24 +18,67 @@ abstract final class EthioColors {
 
 ThemeData buildEthioTheme() {
   const seed = EthioColors.forest;
-  final base = ThemeData(
+  final colorScheme = ColorScheme.fromSeed(
+    seedColor: seed,
+    brightness: Brightness.light,
+    surface: EthioColors.cream,
+    onSurface: EthioColors.charcoal,
+  );
+
+  final baseTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: Brightness.light,
-      surface: EthioColors.cream,
-      onSurface: EthioColors.charcoal,
-    ),
+    colorScheme: colorScheme,
     scaffoldBackgroundColor: EthioColors.cream,
     fontFamily: 'Segoe UI',
-    appBarTheme: const AppBarTheme(
+  );
+
+  final textTheme = baseTheme.textTheme.copyWith(
+    headlineMedium: baseTheme.textTheme.headlineMedium?.copyWith(
+      fontSize: 26,
+      fontWeight: FontWeight.w700,
+      color: EthioColors.charcoal,
+      letterSpacing: -0.6,
+      height: 1.2,
+    ),
+    titleLarge: baseTheme.textTheme.titleLarge?.copyWith(
+      fontSize: 20,
+      fontWeight: FontWeight.w600,
+      color: EthioColors.charcoal,
+      letterSpacing: -0.3,
+    ),
+    titleMedium: baseTheme.textTheme.titleMedium?.copyWith(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: EthioColors.charcoal,
+    ),
+    bodyLarge: baseTheme.textTheme.bodyLarge?.copyWith(
+      fontSize: 15,
+      color: EthioColors.charcoal,
+      height: 1.5,
+    ),
+    bodyMedium: baseTheme.textTheme.bodyMedium?.copyWith(
+      fontSize: 14,
+      color: EthioColors.muted,
+      height: 1.45,
+    ),
+    labelLarge: baseTheme.textTheme.labelLarge?.copyWith(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.8,
+      color: EthioColors.muted,
+    ),
+  );
+
+  return baseTheme.copyWith(
+    textTheme: textTheme,
+    appBarTheme: AppBarTheme(
       elevation: 0,
       scrolledUnderElevation: 0,
       backgroundColor: EthioColors.cream,
       foregroundColor: EthioColors.charcoal,
       centerTitle: false,
-      titleTextStyle: TextStyle(
+      titleTextStyle: textTheme.titleMedium?.copyWith(
         fontSize: 18,
         fontWeight: FontWeight.w600,
         color: EthioColors.charcoal,
@@ -51,13 +94,14 @@ ThemeData buildEthioTheme() {
           fontSize: 15,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.1,
+          inherit: false,
         ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: EthioColors.muted,
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, inherit: false),
       ),
     ),
     cardTheme: CardThemeData(
@@ -83,45 +127,6 @@ ThemeData buildEthioTheme() {
         borderSide: const BorderSide(color: EthioColors.forest, width: 1.5),
       ),
       hintStyle: const TextStyle(color: EthioColors.muted, fontSize: 14),
-    ),
-  );
-
-  return base.copyWith(
-    textTheme: base.textTheme.copyWith(
-      headlineMedium: const TextStyle(
-        fontSize: 26,
-        fontWeight: FontWeight.w700,
-        color: EthioColors.charcoal,
-        letterSpacing: -0.6,
-        height: 1.2,
-      ),
-      titleLarge: const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: EthioColors.charcoal,
-        letterSpacing: -0.3,
-      ),
-      titleMedium: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: EthioColors.charcoal,
-      ),
-      bodyLarge: const TextStyle(
-        fontSize: 15,
-        color: EthioColors.charcoal,
-        height: 1.5,
-      ),
-      bodyMedium: const TextStyle(
-        fontSize: 14,
-        color: EthioColors.muted,
-        height: 1.45,
-      ),
-      labelLarge: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.8,
-        color: EthioColors.muted,
-      ),
     ),
   );
 }

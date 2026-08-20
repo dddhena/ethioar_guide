@@ -21,10 +21,34 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
   final _descriptionController = TextEditingController();
   final _cityController = TextEditingController();
   final _categoryController = TextEditingController(text: 'heritage');
+  final _imageUrlController = TextEditingController();
   final _latitudeController = TextEditingController();
   final _longitudeController = TextEditingController();
   bool _saving = false;
   bool _locationPicked = false;
+
+  static const List<Map<String, String>> _sampleImages = [
+    {
+      'title': 'Fasil Ghebbi (Gondar)',
+      'url': 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80',
+    },
+    {
+      'title': 'Lalibela Rock Church',
+      'url': 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80',
+    },
+    {
+      'title': 'Simien Mountains',
+      'url': 'https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=800&q=80',
+    },
+    {
+      'title': 'Lake Tana (Bahir Dar)',
+      'url': 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
+    },
+    {
+      'title': 'Aksum Obelisk',
+      'url': 'https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?auto=format&fit=crop&w=800&q=80',
+    },
+  ];
 
   @override
   void initState() {
@@ -33,6 +57,9 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
       final lm = widget.landmark!;
       _nameController.text = lm.name;
       _descriptionController.text = lm.description;
+      _cityController.text = lm.city;
+      _categoryController.text = lm.category;
+      _imageUrlController.text = lm.imageUrl;
       _latitudeController.text = lm.latitude.toString();
       _longitudeController.text = lm.longitude.toString();
       _locationPicked = true;
@@ -57,6 +84,7 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
       final lng = double.parse(_longitudeController.text);
       final city = _cityController.text;
       final category = _categoryController.text;
+      final imageUrl = _imageUrlController.text.trim();
 
       if (widget.id != null) {
         await FirestoreService().updateLandmark(
@@ -67,6 +95,7 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
           longitude: lng,
           city: city,
           category: category,
+          imageUrl: imageUrl,
         );
       } else {
         await FirestoreService().addLandmark(
@@ -76,6 +105,7 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
           longitude: lng,
           city: city,
           category: category,
+          imageUrl: imageUrl,
         );
       }
 
@@ -100,6 +130,7 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
     _descriptionController.dispose();
     _cityController.dispose();
     _categoryController.dispose();
+    _imageUrlController.dispose();
     _latitudeController.dispose();
     _longitudeController.dispose();
     super.dispose();
@@ -116,14 +147,20 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
           children: [
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Landmark name'),
+              decoration: const InputDecoration(
+                labelText: 'Landmark name',
+                prefixIcon: Icon(Icons.place),
+              ),
               validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _descriptionController,
               maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Description'),
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                prefixIcon: Icon(Icons.description),
+              ),
               validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
             ),
             const SizedBox(height: 12),
@@ -132,19 +169,86 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
                 Expanded(
                   child: TextFormField(
                     controller: _cityController,
-                    decoration: const InputDecoration(labelText: 'City'),
+                    decoration: const InputDecoration(
+                      labelText: 'City (e.g. Gondar, Lalibela)',
+                      prefixIcon: Icon(Icons.location_city),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: TextFormField(
                     controller: _categoryController,
-                    decoration: const InputDecoration(labelText: 'Category'),
+                    decoration: const InputDecoration(
+                      labelText: 'Category (e.g. heritage, nature)',
+                      prefixIcon: Icon(Icons.category),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+            // ── Photo / Image URL section ──────────────────────────
+            Text('Tourist Place Photo', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _imageUrlController,
+              decoration: InputDecoration(
+                labelText: 'Photo URL (http:// or https://)',
+                prefixIcon: const Icon(Icons.photo_camera),
+                suffixIcon: _imageUrlController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () => setState(() => _imageUrlController.clear()),
+                      )
+                    : null,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 8),
+            if (_imageUrlController.text.trim().isNotEmpty)
+              Container(
+                height: 140,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Image.network(
+                  _imageUrlController.text.trim(),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: Colors.grey.shade100,
+                    child: const Center(
+                      child: Text('Invalid image URL or cannot load preview', style: TextStyle(color: Colors.red, fontSize: 12)),
+                    ),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
+            const Text('Or pick a sample photo:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const SizedBox(height: 4),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _sampleImages.map((sample) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ActionChip(
+                      avatar: const Icon(Icons.image, size: 16),
+                      label: Text(sample['title']!, style: const TextStyle(fontSize: 11)),
+                      onPressed: () {
+                        setState(() {
+                          _imageUrlController.text = sample['url']!;
+                        });
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

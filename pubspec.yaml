@@ -41,6 +41,15 @@ dependencies:
   cloud_firestore: ^6.8.0
   ar_flutter_plugin: ^0.7.3
   google_maps_flutter: ^2.3.0
+  
+  # Weather and API dependencies
+  http: ^1.2.0
+  geolocator: ^9.0.2
+
+  # AI, media, and storage
+  google_generative_ai: ^0.4.6
+  firebase_storage: ^13.0.0
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

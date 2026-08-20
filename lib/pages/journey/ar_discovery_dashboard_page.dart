@@ -7,15 +7,19 @@ import '../../theme/ethio_theme.dart';
 import '../../widgets/chat_icon_button.dart';
 import '../../widgets/journey/dashboard_widgets.dart';
 import '../../widgets/notification_bell_button.dart';
+import '../ai_guide_page.dart';
 import '../ar_guide.dart';
 import '../camera_preview.dart';
 import '../dashboard_page.dart';
+import '../explore_page.dart';
+import '../favorites_page.dart';
 import '../landmarks_page.dart';
 import '../login_page.dart';
 import '../nearby_landmarks_page.dart';
 import '../profile_page.dart';
 import '../providers/my_reservations_page.dart';
 import '../providers/service_providers_list_page.dart';
+import '../trips_page.dart';
 import 'choose_journey_page.dart';
 import 'guided_journey_dashboard_page.dart';
 
@@ -100,11 +104,9 @@ class _ArDiscoveryDashboardPageState extends State<ArDiscoveryDashboardPage> {
         ExploreMoreItem(icon: Icons.account_balance, label: 'Places', onTap: () => _push(const LandmarksPage())),
         ExploreMoreItem(icon: Icons.map_outlined, label: 'Map', onTap: () => _push(const NearbyLandmarksPage())),
         ExploreMoreItem(
-          icon: Icons.cloud_outlined,
-          label: 'Weather',
-          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Weather forecast coming soon')),
-          ),
+          icon: Icons.favorite_border,
+          label: 'Favorites',
+          onTap: () => _push(const FavoritesPage()),
         ),
         ExploreMoreItem(
           icon: Icons.hotel_outlined,
@@ -124,12 +126,12 @@ class _ArDiscoveryDashboardPageState extends State<ArDiscoveryDashboardPage> {
         ExploreMoreItem(
           icon: Icons.luggage_outlined,
           label: 'Trips',
-          onTap: () => _push(const MyReservationsPage()),
+          onTap: () => _push(const TripsPage()),
         ),
         ExploreMoreItem(
           icon: Icons.auto_awesome,
           label: 'AI Guide',
-          onTap: () => _push(const CameraPreviewPage()),
+          onTap: () => _push(const AiGuidePage()),
         ),
       ];
 
@@ -240,7 +242,7 @@ class _ArDiscoveryDashboardPageState extends State<ArDiscoveryDashboardPage> {
       case 2:
         _push(const NearbyLandmarksPage());
       case 3:
-        _push(const MyReservationsPage());
+        _push(const AiGuidePage());
       case 4:
         _push(const ProfilePage());
     }
@@ -368,7 +370,7 @@ class _ArDiscoveryDashboardPageState extends State<ArDiscoveryDashboardPage> {
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.view_in_ar_outlined), selectedIcon: Icon(Icons.view_in_ar), label: 'AR'),
           NavigationDestination(icon: Icon(Icons.map_outlined), selectedIcon: Icon(Icons.map), label: 'Map'),
-          NavigationDestination(icon: Icon(Icons.luggage_outlined), selectedIcon: Icon(Icons.luggage), label: 'Trips'),
+          NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: 'AI Guide'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
         ],
       ),

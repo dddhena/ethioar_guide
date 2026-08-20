@@ -187,12 +187,14 @@ class DashboardSectionHeader extends StatelessWidget {
 
 class PremiumSearchBar extends StatelessWidget {
   final String hint;
+  final TextEditingController? controller;
   final ValueChanged<String>? onChanged;
   final VoidCallback? onTap;
 
   const PremiumSearchBar({
     super.key,
     required this.hint,
+    this.controller,
     this.onChanged,
     this.onTap,
   });
@@ -207,6 +209,7 @@ class PremiumSearchBar extends StatelessWidget {
         child: IgnorePointer(
           ignoring: onTap != null,
           child: TextField(
+            controller: controller,
             onChanged: onChanged,
             decoration: InputDecoration(
               hintText: hint,

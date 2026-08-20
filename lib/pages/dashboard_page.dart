@@ -24,6 +24,7 @@ import 'admin/admin_emergency_dashboard.dart';
 import 'guides/guide_dashboard_page.dart';
 import 'guides/guides_list_page.dart';
 import 'guides/my_guide_bookings_page.dart';
+import 'recommendations_page.dart';
 
 import 'admin_pages.dart';
 
@@ -167,6 +168,15 @@ class _DashboardPageState extends State<DashboardPage> {
             label: const Text('🚨 Emergency SOS Alert (1-Tap Help)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             onPressed: () => EmergencySosDialog.show(context),
           ),
+        ),
+
+        _sectionHeader('Personalized Recommendations'),
+        _primaryBtn(
+          icon: Icons.auto_awesome,
+          label: '✨ Recommended for You',
+          color: Colors.purple.shade700,
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const RecommendationsPage())),
         ),
 
         _sectionHeader('Explore & Experience Ethiopia'),

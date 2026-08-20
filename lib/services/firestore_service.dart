@@ -95,6 +95,7 @@ class FirestoreService {
     required double longitude,
     String city = '',
     String category = 'heritage',
+    String imageUrl = '',
   }) async {
     await _db.collection('landmarks').add({
       'name': name.trim(),
@@ -103,6 +104,12 @@ class FirestoreService {
       'longitude': longitude,
       'city': city.trim(),
       'category': category.trim(),
+      'imageUrl': imageUrl,
+      'rating': 4.0,
+      'reviewCount': 0,
+      'outdoorFriendly': true,
+      'bestWeatherConditions': ['clear', 'partly_cloudy'],
+      'popularityScore': 0.0,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
@@ -116,6 +123,12 @@ class FirestoreService {
     double? longitude,
     String? city,
     String? category,
+    String? imageUrl,
+    double? rating,
+    int? reviewCount,
+    bool? outdoorFriendly,
+    List<String>? bestWeatherConditions,
+    double? popularityScore,
   }) async {
     final Map<String, Object?> data = {};
     if (name != null) data['name'] = name.trim();
@@ -124,6 +137,12 @@ class FirestoreService {
     if (longitude != null) data['longitude'] = longitude;
     if (city != null) data['city'] = city.trim();
     if (category != null) data['category'] = category.trim();
+    if (imageUrl != null) data['imageUrl'] = imageUrl;
+    if (rating != null) data['rating'] = rating;
+    if (reviewCount != null) data['reviewCount'] = reviewCount;
+    if (outdoorFriendly != null) data['outdoorFriendly'] = outdoorFriendly;
+    if (bestWeatherConditions != null) data['bestWeatherConditions'] = bestWeatherConditions;
+    if (popularityScore != null) data['popularityScore'] = popularityScore;
 
     if (data.isEmpty) return;
     await _db.collection('landmarks').doc(id).update(data);
@@ -155,6 +174,13 @@ class FirestoreService {
           description: 'Ancient obelisk and historical monument in Aksum.',
           latitude: 14.127,
           longitude: 38.719,
+          city: 'Aksum',
+          category: 'heritage',
+          rating: 4.7,
+          reviewCount: 234,
+          outdoorFriendly: true,
+          bestWeatherConditions: ['clear', 'partly_cloudy'],
+          popularityScore: 85.0,
         ),
         Landmark(
           id: 'demo-lalibela',
@@ -162,6 +188,13 @@ class FirestoreService {
           description: 'Famous rock-hewn churches and UNESCO heritage site.',
           latitude: 12.031,
           longitude: 39.047,
+          city: 'Lalibela',
+          category: 'religious',
+          rating: 4.9,
+          reviewCount: 456,
+          outdoorFriendly: true,
+          bestWeatherConditions: ['clear', 'partly_cloudy'],
+          popularityScore: 95.0,
         ),
         Landmark(
           id: 'demo-gondar',
@@ -169,6 +202,27 @@ class FirestoreService {
           description: 'Royal enclosure and historic castle complex in Gondar.',
           latitude: 12.601,
           longitude: 37.467,
+          city: 'Gondar',
+          category: 'heritage',
+          rating: 4.6,
+          reviewCount: 189,
+          outdoorFriendly: true,
+          bestWeatherConditions: ['clear', 'partly_cloudy'],
+          popularityScore: 78.0,
+        ),
+        Landmark(
+          id: 'demo-bahirdar',
+          name: 'Lake Tana',
+          description: 'Sacred lake with monasteries and the Blue Nile Falls.',
+          latitude: 11.5936,
+          longitude: 37.3908,
+          city: 'Bahir Dar',
+          category: 'nature',
+          rating: 4.5,
+          reviewCount: 123,
+          outdoorFriendly: true,
+          bestWeatherConditions: ['clear', 'partly_cloudy'],
+          popularityScore: 70.0,
         ),
       ];
     }

@@ -15,6 +15,7 @@ import 'pages/providers/my_reservations_page.dart';
 import 'pages/providers/register_provider_page.dart';
 import 'pages/providers/provider_dashboard_page.dart';
 import 'pages/providers/admin_providers_page.dart';
+import 'pages/recommendations_page.dart';
 // This app expects you to run `flutterfire configure` locally to generate
 // lib/firebase_options.dart with DefaultFirebaseOptions. After that the app
 // initializes Firebase for all supported platforms using the generated options.
@@ -43,26 +44,41 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-
-    return FutureBuilder<FirebaseApp>(
-      future: _initialization,
-      builder: (context, snapshot) {
-        // Show loading while initializing
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const MaterialApp(
-            home: Scaffold(
+    return MaterialApp(
+      title: 'EthioAR Guide',
+      theme: buildEthioTheme(),
+      routes: {
+        '/login': (_) => const LoginPage(),
+        '/register': (_) => const RegisterPage(),
+        '/dashboard': (_) => const DashboardPage(),
+        '/choose-journey': (_) => const ChooseJourneyPage(),
+        '/guided-journey': (_) => const GuidedJourneyDashboardPage(),
+        '/ar-discovery': (_) => const ArDiscoveryDashboardPage(),
+        '/profile': (_) => const ProfilePage(),
+        '/nearby': (_) => const NearbyLandmarksPage(),
+        '/services': (_) => const ServiceProvidersListPage(),
+        '/my-reservations': (_) => const MyReservationsPage(),
+        '/provider-dashboard': (_) => const ProviderDashboardPage(),
+        '/register-provider': (_) => const RegisterProviderPage(),
+        '/admin-providers': (_) => const AdminProvidersPage(),
+        '/recommendations': (_) => const RecommendationsPage(),
+      },
+      home: FutureBuilder<FirebaseApp>(
+        future: _initialization,
+        builder: (context, snapshot) {
+          // Show loading while initializing
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
-            ),
-          );
-        }
+            );
+          }
 
-        // If initialization failed, show an error but allow the user to continue
-        if (snapshot.hasError) {
-          return MaterialApp(
-            home: Scaffold(
+          // If initialization failed, show an error but allow the user to continue
+          if (snapshot.hasError) {
+            return Scaffold(
               appBar: AppBar(title: const Text('EthioAR Guide')),
               body: Center(
-                child: Padding(
+                child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -73,40 +89,25 @@ class _MyAppState extends State<MyApp> {
                       const SizedBox(height: 8),
                       Text(snapshot.error.toString()),
                       const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HomeDecider())),
-                        child: const Text('Continue (offline)'),
+                      Builder(
+                        builder: (btnContext) => ElevatedButton(
+                          onPressed: () => Navigator.of(btnContext).push(
+                            MaterialPageRoute(builder: (_) => const HomeDecider()),
+                          ),
+                          child: const Text('Continue (offline)'),
+                        ),
                       )
                     ],
                   ),
                 ),
               ),
-            ),
-          );
-        }
+            );
+          }
 
-        // Initialization succeeded — show the app
-        return MaterialApp(
-          title: 'EthioAR Guide',
-          theme: buildEthioTheme(),
-          home: const HomeDecider(),
-          routes: {
-            '/login': (_) => const LoginPage(),
-            '/register': (_) => const RegisterPage(),
-            '/dashboard': (_) => const DashboardPage(),
-            '/choose-journey': (_) => const ChooseJourneyPage(),
-            '/guided-journey': (_) => const GuidedJourneyDashboardPage(),
-            '/ar-discovery': (_) => const ArDiscoveryDashboardPage(),
-            '/profile': (_) => const ProfilePage(),
-            '/nearby': (_) => const NearbyLandmarksPage(),
-            '/services': (_) => const ServiceProvidersListPage(),
-            '/my-reservations': (_) => const MyReservationsPage(),
-            '/provider-dashboard': (_) => const ProviderDashboardPage(),
-            '/register-provider': (_) => const RegisterProviderPage(),
-            '/admin-providers': (_) => const AdminProvidersPage(),
-          },
-        );
-      },
+          // Initialization succeeded — show the app
+          return const HomeDecider();
+        },
+      ),
     );
   }
 }
@@ -120,15 +121,18 @@ class HomeDecider extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('EthioAR Guide')),
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('✅ Firebase connected', style: TextStyle(fontSize: 18)),
-            const SizedBox(height: 16),
-            ElevatedButton(onPressed: () => Navigator.of(context).pushNamed('/login'), child: const Text('Go to Login')),
-            const SizedBox(height: 8),
-            ElevatedButton(onPressed: () => Navigator.of(context).pushNamed('/register'), child: const Text('Create Account')),
-          ],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('✅ Firebase connected', style: TextStyle(fontSize: 18)),
+              const SizedBox(height: 16),
+              ElevatedButton(onPressed: () => Navigator.of(context).pushNamed('/login'), child: const Text('Go to Login')),
+              const SizedBox(height: 8),
+              ElevatedButton(onPressed: () => Navigator.of(context).pushNamed('/register'), child: const Text('Create Account')),
+            ],
+          ),
         ),
       ),
     );
