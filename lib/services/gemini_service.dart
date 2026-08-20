@@ -164,7 +164,7 @@ Suggest indoor/museum activities if weather is rainy or stormy.
                 _activeModel = modelName; // remember the successful model
                 print('[GeminiService] Successfully received response from $modelName');
 
-                final placeCards = _matchLandmarksInText(rawText, allLandmarks);
+                final placeCards = matchLandmarksInText(rawText, allLandmarks);
                 final isItinerary = userMessage.toLowerCase().contains('plan') ||
                     userMessage.toLowerCase().contains('itinerary') ||
                     rawText.toLowerCase().contains('day 1');
@@ -320,7 +320,7 @@ ${context.city != null ? "You're currently exploring around ${context.city}." : 
     );
   }
 
-  List<Landmark> _matchLandmarksInText(String text, List<Landmark> landmarks) {
+  List<Landmark> matchLandmarksInText(String text, List<Landmark> landmarks) {
     final lower = text.toLowerCase();
     final matched = <Landmark>[];
     for (final lm in landmarks) {

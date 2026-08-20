@@ -14,12 +14,16 @@ import '../widgets/journey/dashboard_widgets.dart';
 import '../widgets/notification_bell_button.dart';
 import '../widgets/place_image.dart';
 import 'camera_preview.dart';
+import 'favorites_page.dart';
 import 'guides/guides_list_page.dart';
 import 'journey/guided_tours_browse_page.dart';
 import 'landmark_detail_page.dart';
+import 'landmarks_page.dart';
 import 'nearby_landmarks_page.dart';
 import 'providers/service_providers_list_page.dart';
 import 'recommendations_page.dart';
+import 'trips_page.dart';
+import 'ai_guide_page.dart';
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -184,6 +188,72 @@ class _ExplorePageState extends State<ExplorePage> {
                     hint: 'Search places, attractions, services...',
                     controller: _searchController,
                     onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text('Quick Access', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 86,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        _QuickShortcutChip(
+                          icon: Icons.account_balance,
+                          label: 'Places',
+                          color: EthioColors.forest,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LandmarksPage())),
+                        ),
+                        const SizedBox(width: 10),
+                        _QuickShortcutChip(
+                          icon: Icons.map_outlined,
+                          label: 'Map',
+                          color: EthioColors.slate,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NearbyLandmarksPage())),
+                        ),
+                        const SizedBox(width: 10),
+                        _QuickShortcutChip(
+                          icon: Icons.favorite_rounded,
+                          label: 'Favorites',
+                          color: Colors.red.shade400,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesPage())),
+                        ),
+                        const SizedBox(width: 10),
+                        _QuickShortcutChip(
+                          icon: Icons.hotel_outlined,
+                          label: 'Hotels',
+                          color: EthioColors.earth,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ServiceProvidersListPage())),
+                        ),
+                        const SizedBox(width: 10),
+                        _QuickShortcutChip(
+                          icon: Icons.restaurant_outlined,
+                          label: 'Dining',
+                          color: EthioColors.terracotta,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ServiceProvidersListPage())),
+                        ),
+                        const SizedBox(width: 10),
+                        _QuickShortcutChip(
+                          icon: Icons.directions_car_outlined,
+                          label: 'Transport',
+                          color: EthioColors.stone,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ServiceProvidersListPage())),
+                        ),
+                        const SizedBox(width: 10),
+                        _QuickShortcutChip(
+                          icon: Icons.luggage_outlined,
+                          label: 'Trips',
+                          color: Colors.teal.shade700,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TripsPage())),
+                        ),
+                        const SizedBox(width: 10),
+                        _QuickShortcutChip(
+                          icon: Icons.auto_awesome,
+                          label: 'AI Guide',
+                          color: Colors.amber.shade800,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AiGuidePage())),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 24),
                   const Text('Categories', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
@@ -426,6 +496,72 @@ class _PlaceListTile extends StatelessWidget {
       title: Text(landmark.name, style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text('$distance • ${landmark.category}'),
       trailing: const Icon(Icons.chevron_right),
+    );
+  }
+}
+
+class _QuickShortcutChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickShortcutChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          width: 76,
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: EthioColors.divider.withValues(alpha: 0.8)),
+            boxShadow: const [
+              BoxShadow(
+                color: EthioColors.cardShadow,
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 18, color: color),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: EthioColors.charcoal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

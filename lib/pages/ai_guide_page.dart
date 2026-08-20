@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../config/api_config.dart';
+import '../models/ai_conversation.dart';
 import '../models/landmark.dart';
 import '../models/trip.dart';
+import '../services/ai_chat_history_service.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/gemini_service.dart';
@@ -48,12 +50,16 @@ class _AiGuidePageState extends State<AiGuidePage> {
   final _weatherService = WeatherService();
   final _tripService = TripService();
   final _interaction = InteractionService();
+  final _historyService = AiChatHistoryService.instance;
 
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
   final List<AiGuideMessage> _messages = [];
   final List<Map<String, String>> _history = [];
+
+  String? _currentConversationId;
+  String _currentConversationTitle = '';
 
   bool _loadingContext = true;
   bool _sending = false;
@@ -233,6 +239,336 @@ class _AiGuidePageState extends State<AiGuidePage> {
     });
   }
 
+  void _startNewChat() {
+    if (_messages.isEmpty) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Start New Chat?'),
+        content: const Text('Your current conversation will be cleared unless you save it first.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _saveConversation();
+            },
+            child: const Text('Save First'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: EthioColors.forest, foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                _messages.clear();
+                _history.clear();
+                _currentConversationId = null;
+                _currentConversationTitle = '';
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Started a new AI conversation ✨')),
+              );
+            },
+            child: const Text('New Chat'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveConversation() async {
+    if (_messages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No messages to save yet. Start chatting first!')),
+      );
+      return;
+    }
+
+    final defaultTitle = _currentConversationTitle.isNotEmpty
+        ? _currentConversationTitle
+        : (_messages.firstWhere((m) => m.isUser, orElse: () => _messages.first).text);
+    final titleCtrl = TextEditingController(
+      text: defaultTitle.length > 40 ? '${defaultTitle.substring(0, 40)}...' : defaultTitle,
+    );
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.bookmark_add, color: EthioColors.forest),
+            SizedBox(width: 8),
+            Text('Save Conversation', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Give this conversation a title to easily find it later:'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: titleCtrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Conversation Title',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: EthioColors.forest, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final uid = _auth.currentUser?.uid ?? 'guest';
+    final convId = _currentConversationId ?? 'ai_conv_${DateTime.now().millisecondsSinceEpoch}';
+    final title = titleCtrl.text.trim().isNotEmpty ? titleCtrl.text.trim() : 'AI Guide Conversation';
+
+    final savedMessages = _messages
+        .map((m) => AiSavedMessage(
+              isUser: m.isUser,
+              text: m.text,
+              isItinerary: m.isItinerary,
+              timestamp: m.timestamp,
+            ))
+        .toList();
+
+    final conv = AiConversation(
+      id: convId,
+      userId: uid,
+      title: title,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      messages: savedMessages,
+      history: _history,
+      city: _currentCity,
+      journeyMode: JourneyPreferenceService.instance.mode.name,
+    );
+
+    await _historyService.saveConversation(conv);
+
+    if (mounted) {
+      setState(() {
+        _currentConversationId = convId;
+        _currentConversationTitle = title;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Conversation "$title" saved! 💾')),
+      );
+    }
+  }
+
+  void _showSavedConversationsSheet() {
+    final uid = _auth.currentUser?.uid ?? 'guest';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              decoration: const BoxDecoration(
+                color: EthioColors.cream,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.history_rounded, color: EthioColors.forest),
+                            SizedBox(width: 8),
+                            Text('Saved Conversations', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: FutureBuilder<List<AiConversation>>(
+                      future: _historyService.getSavedConversations(uid),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(color: EthioColors.forest),
+                          );
+                        }
+
+                        final list = snapshot.data ?? [];
+                        if (list.isEmpty) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.bookmark_border, size: 56, color: EthioColors.muted.withValues(alpha: 0.5)),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'No Saved Conversations Yet',
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: EthioColors.charcoal),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    'Tap the save icon (💾) during any chat to save your conversations.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 13, color: EthioColors.muted),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        return ListView.separated(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: list.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final item = list[index];
+                            final isCurrent = item.id == _currentConversationId;
+
+                            return Card(
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(
+                                  color: isCurrent ? EthioColors.forest : EthioColors.divider,
+                                  width: isCurrent ? 2 : 1,
+                                ),
+                              ),
+                              color: Colors.white,
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                title: Text(
+                                  item.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: isCurrent ? EthioColors.forest : EthioColors.charcoal,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${item.messages.length} messages • ${item.createdAt.day}/${item.createdAt.month}/${item.createdAt.year}',
+                                      style: const TextStyle(fontSize: 12, color: EthioColors.muted),
+                                    ),
+                                    if (item.messages.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        item.messages.first.text,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                      tooltip: 'Delete',
+                                      onPressed: () async {
+                                        await _historyService.deleteConversation(uid, item.id);
+                                        setSheetState(() {});
+                                        if (item.id == _currentConversationId) {
+                                          _currentConversationId = null;
+                                        }
+                                      },
+                                    ),
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: EthioColors.forest,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      ),
+                                      onPressed: () {
+                                        Navigator.pop(ctx);
+                                        setState(() {
+                                          _currentConversationId = item.id;
+                                          _currentConversationTitle = item.title;
+                                          _messages.clear();
+                                          _history.clear();
+
+                                          for (final m in item.messages) {
+                                            final placeCards = m.isUser
+                                                ? <Landmark>[]
+                                                : _gemini.matchLandmarksInText(m.text, _allLandmarks);
+                                            _messages.add(AiGuideMessage(
+                                              isUser: m.isUser,
+                                              text: m.text,
+                                              placeCards: placeCards,
+                                              isItinerary: m.isItinerary,
+                                              timestamp: m.timestamp,
+                                            ));
+                                          }
+
+                                          _history.addAll(item.history);
+                                        });
+                                        _scrollToBottom();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Loaded "${item.title}"')),
+                                        );
+                                      },
+                                      child: const Text('Load', style: TextStyle(fontSize: 12)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showApiKeyDialog() {
     final keyCtrl = TextEditingController(text: ApiConfig.geminiApiKey);
     showDialog(
@@ -297,6 +633,21 @@ class _AiGuidePageState extends State<AiGuidePage> {
       appBar: AppBar(
         title: const Text('AI Travel Guide'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.add_comment_outlined),
+            tooltip: 'New Chat',
+            onPressed: _startNewChat,
+          ),
+          IconButton(
+            icon: const Icon(Icons.bookmark_add_outlined),
+            tooltip: 'Save Conversation',
+            onPressed: _saveConversation,
+          ),
+          IconButton(
+            icon: const Icon(Icons.history_rounded),
+            tooltip: 'Saved Conversations',
+            onPressed: _showSavedConversationsSheet,
+          ),
           IconButton(
             icon: Icon(
               ApiConfig.hasGeminiKey ? Icons.bolt : Icons.vpn_key_outlined,

@@ -6,6 +6,7 @@ import '../../services/journey_preference_service.dart';
 import '../../theme/ethio_theme.dart';
 import '../../widgets/chat_icon_button.dart';
 import '../../widgets/journey/dashboard_widgets.dart';
+import '../../widgets/journey/recommended_places_section.dart';
 import '../../widgets/notification_bell_button.dart';
 import '../ai_guide_page.dart';
 import '../ar_guide.dart';
@@ -100,40 +101,20 @@ class _ArDiscoveryDashboardPageState extends State<ArDiscoveryDashboardPage> {
     );
   }
 
-  List<ExploreMoreItem> get _exploreMore => [
-        ExploreMoreItem(icon: Icons.account_balance, label: 'Places', onTap: () => _push(const LandmarksPage())),
-        ExploreMoreItem(icon: Icons.map_outlined, label: 'Map', onTap: () => _push(const NearbyLandmarksPage())),
-        ExploreMoreItem(
-          icon: Icons.favorite_border,
-          label: 'Favorites',
-          onTap: () => _push(const FavoritesPage()),
-        ),
-        ExploreMoreItem(
-          icon: Icons.hotel_outlined,
-          label: 'Hotels',
-          onTap: () => _push(const ServiceProvidersListPage()),
-        ),
-        ExploreMoreItem(
-          icon: Icons.restaurant_outlined,
-          label: 'Dining',
-          onTap: () => _push(const ServiceProvidersListPage()),
-        ),
-        ExploreMoreItem(
-          icon: Icons.directions_car_outlined,
-          label: 'Transport',
-          onTap: () => _push(const ServiceProvidersListPage()),
-        ),
-        ExploreMoreItem(
-          icon: Icons.luggage_outlined,
-          label: 'Trips',
-          onTap: () => _push(const TripsPage()),
-        ),
-        ExploreMoreItem(
-          icon: Icons.auto_awesome,
-          label: 'AI Guide',
-          onTap: () => _push(const AiGuidePage()),
-        ),
-      ];
+  void _onNavTap(int index) {
+    switch (index) {
+      case 0:
+        setState(() => _navIndex = 0);
+      case 1:
+        _push(const CameraPreviewPage());
+      case 2:
+        _push(const ExplorePage());
+      case 3:
+        _push(const AiGuidePage());
+      case 4:
+        _push(const ProfilePage());
+    }
+  }
 
   Widget _buildHeroCard() {
     return Material(
@@ -233,21 +214,6 @@ class _ArDiscoveryDashboardPageState extends State<ArDiscoveryDashboardPage> {
     );
   }
 
-  void _onNavTap(int index) {
-    switch (index) {
-      case 0:
-        setState(() => _navIndex = 0);
-      case 1:
-        _push(const CameraPreviewPage());
-      case 2:
-        _push(const NearbyLandmarksPage());
-      case 3:
-        _push(const AiGuidePage());
-      case 4:
-        _push(const ProfilePage());
-    }
-  }
-
   Widget _buildHomeTab() {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -320,8 +286,8 @@ class _ArDiscoveryDashboardPageState extends State<ArDiscoveryDashboardPage> {
           },
         ),
         const SizedBox(height: 28),
-        ExploreMoreSection(items: _exploreMore),
-        const SizedBox(height: 20),
+        const RecommendedPlacesSection(title: 'RECOMMENDED PLACES'),
+        const SizedBox(height: 24),
         SwitchJourneyButton(label: 'Switch to Guided Journey', onTap: _switchToGuided),
         const SizedBox(height: 8),
         Center(
@@ -369,7 +335,7 @@ class _ArDiscoveryDashboardPageState extends State<ArDiscoveryDashboardPage> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.view_in_ar_outlined), selectedIcon: Icon(Icons.view_in_ar), label: 'AR'),
-          NavigationDestination(icon: Icon(Icons.map_outlined), selectedIcon: Icon(Icons.map), label: 'Map'),
+          NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore), label: 'Explore'),
           NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: 'AI Guide'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
         ],

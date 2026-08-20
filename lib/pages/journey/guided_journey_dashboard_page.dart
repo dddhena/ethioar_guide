@@ -6,6 +6,7 @@ import '../../services/journey_preference_service.dart';
 import '../../theme/ethio_theme.dart';
 import '../../widgets/chat_icon_button.dart';
 import '../../widgets/journey/dashboard_widgets.dart';
+import '../../widgets/journey/recommended_places_section.dart';
 import '../../widgets/notification_bell_button.dart';
 import '../ai_guide_page.dart';
 import '../camera_preview.dart';
@@ -114,41 +115,6 @@ class _GuidedJourneyDashboardPageState extends State<GuidedJourneyDashboardPage>
     );
   }
 
-  List<ExploreMoreItem> get _exploreMore => [
-        ExploreMoreItem(icon: Icons.account_balance, label: 'Places', onTap: () => _push(const LandmarksPage())),
-        ExploreMoreItem(icon: Icons.map_outlined, label: 'Map', onTap: () => _push(const NearbyLandmarksPage())),
-        ExploreMoreItem(
-          icon: Icons.favorite_border,
-          label: 'Favorites',
-          onTap: () => _push(const FavoritesPage()),
-        ),
-        ExploreMoreItem(
-          icon: Icons.hotel_outlined,
-          label: 'Hotels',
-          onTap: () => _push(const ServiceProvidersListPage()),
-        ),
-        ExploreMoreItem(
-          icon: Icons.restaurant_outlined,
-          label: 'Dining',
-          onTap: () => _push(const ServiceProvidersListPage()),
-        ),
-        ExploreMoreItem(
-          icon: Icons.directions_car_outlined,
-          label: 'Transport',
-          onTap: () => _push(const ServiceProvidersListPage()),
-        ),
-        ExploreMoreItem(
-          icon: Icons.luggage_outlined,
-          label: 'Trips',
-          onTap: () => _push(const TripsPage()),
-        ),
-        ExploreMoreItem(
-          icon: Icons.auto_awesome,
-          label: 'AI Guide',
-          onTap: () => _push(const AiGuidePage()),
-        ),
-      ];
-
   void _onNavTap(int index) {
     switch (index) {
       case 0:
@@ -236,8 +202,8 @@ class _GuidedJourneyDashboardPageState extends State<GuidedJourneyDashboardPage>
           },
         ),
         const SizedBox(height: 28),
-        ExploreMoreSection(items: _exploreMore),
-        const SizedBox(height: 20),
+        const RecommendedPlacesSection(title: 'RECOMMENDED PLACES'),
+        const SizedBox(height: 24),
         SwitchJourneyButton(label: 'Switch to AR Discovery', onTap: _switchToAr),
         const SizedBox(height: 8),
         Center(
