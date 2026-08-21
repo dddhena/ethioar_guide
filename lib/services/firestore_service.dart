@@ -96,6 +96,7 @@ class FirestoreService {
     String city = '',
     String category = 'heritage',
     String imageUrl = '',
+    double entranceFee = 0.0,
   }) async {
     await _db.collection('landmarks').add({
       'name': name.trim(),
@@ -105,6 +106,7 @@ class FirestoreService {
       'city': city.trim(),
       'category': category.trim(),
       'imageUrl': imageUrl,
+      'entranceFee': entranceFee,
       'rating': 4.0,
       'reviewCount': 0,
       'outdoorFriendly': true,
@@ -129,6 +131,7 @@ class FirestoreService {
     bool? outdoorFriendly,
     List<String>? bestWeatherConditions,
     double? popularityScore,
+    double? entranceFee,
   }) async {
     final Map<String, Object?> data = {};
     if (name != null) data['name'] = name.trim();
@@ -143,6 +146,7 @@ class FirestoreService {
     if (outdoorFriendly != null) data['outdoorFriendly'] = outdoorFriendly;
     if (bestWeatherConditions != null) data['bestWeatherConditions'] = bestWeatherConditions;
     if (popularityScore != null) data['popularityScore'] = popularityScore;
+    if (entranceFee != null) data['entranceFee'] = entranceFee;
 
     if (data.isEmpty) return;
     await _db.collection('landmarks').doc(id).update(data);
@@ -181,6 +185,7 @@ class FirestoreService {
           outdoorFriendly: true,
           bestWeatherConditions: ['clear', 'partly_cloudy'],
           popularityScore: 85.0,
+          entranceFee: 200.0,
         ),
         Landmark(
           id: 'demo-lalibela',
@@ -195,6 +200,7 @@ class FirestoreService {
           outdoorFriendly: true,
           bestWeatherConditions: ['clear', 'partly_cloudy'],
           popularityScore: 95.0,
+          entranceFee: 500.0,
         ),
         Landmark(
           id: 'demo-gondar',
@@ -209,6 +215,7 @@ class FirestoreService {
           outdoorFriendly: true,
           bestWeatherConditions: ['clear', 'partly_cloudy'],
           popularityScore: 78.0,
+          entranceFee: 300.0,
         ),
         Landmark(
           id: 'demo-bahirdar',
@@ -223,6 +230,7 @@ class FirestoreService {
           outdoorFriendly: true,
           bestWeatherConditions: ['clear', 'partly_cloudy'],
           popularityScore: 70.0,
+          entranceFee: 150.0,
         ),
       ];
     }

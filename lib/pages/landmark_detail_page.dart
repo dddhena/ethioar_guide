@@ -54,6 +54,51 @@ class LandmarkDetailPage extends StatelessWidget {
                 ],
               ),
             ],
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: landmark.entranceFee > 0 ? Colors.amber.shade50 : Colors.green.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: landmark.entranceFee > 0 ? Colors.amber.shade300 : Colors.green.shade300,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.confirmation_number_outlined,
+                    size: 18,
+                    color: landmark.entranceFee > 0 ? Colors.amber.shade900 : Colors.green.shade800,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Entrance Fee: ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: landmark.entranceFee > 0 ? Colors.amber.shade900 : Colors.green.shade800,
+                    ),
+                  ),
+                  Text(
+                    landmark.formattedEntranceFee,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: landmark.entranceFee > 0 ? Colors.amber.shade900 : Colors.green.shade800,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    landmark.entranceFee > 0 ? 'Admin verified' : 'Open access',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: landmark.entranceFee > 0 ? Colors.amber.shade800 : Colors.green.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
             Text(landmark.description, style: const TextStyle(fontSize: 16, height: 1.5)),
             const SizedBox(height: 24),

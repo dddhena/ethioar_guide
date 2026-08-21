@@ -21,6 +21,7 @@ import '../widgets/chat_icon_button.dart';
 import 'chat/conversations_list_page.dart';
 import 'emergency/emergency_sos_dialog.dart';
 import 'admin/admin_emergency_dashboard.dart';
+import 'admin/admin_payment_verification_page.dart';
 import 'guides/guide_dashboard_page.dart';
 import 'guides/guides_list_page.dart';
 import 'guides/my_guide_bookings_page.dart';
@@ -375,6 +376,22 @@ class _DashboardPageState extends State<DashboardPage> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             onPressed: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => AdminProvidersPage())),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              backgroundColor: Colors.teal.shade800,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.confirmation_number),
+            label: const Text('💳 Verify Entrance Payments',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            onPressed: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const AdminPaymentVerificationPage())),
           ),
         ),
         Padding(

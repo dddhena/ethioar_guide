@@ -9,6 +9,9 @@ class TouristTrip {
   final DateTime endDate;
   final List<String> placeIds;
   final String status; // planning / active / completed
+  final double entranceFeeTotal;
+  final String entrancePaymentStatus; // 'unpaid', 'pending', 'verified', 'rejected'
+  final String? entrancePaymentId;
   final DateTime? createdAt;
 
   TouristTrip({
@@ -20,11 +23,20 @@ class TouristTrip {
     required this.endDate,
     this.placeIds = const [],
     this.status = 'planning',
+    this.entranceFeeTotal = 0.0,
+    this.entrancePaymentStatus = 'unpaid',
+    this.entrancePaymentId,
     this.createdAt,
   });
 
   bool get isCompleted => status == 'completed';
   bool get isActive => status == 'active';
+  bool get isEntrancePaid => entrancePaymentStatus == 'verified' || entrancePaymentStatus == 'completed';
+  bool get isEntrancePending => entrancePaymentStatus == 'pending';
+  bool get isEntranceRejected => entrancePaymentStatus == 'rejected';
+
+  String get formattedEntranceFeeTotal =>
+      '${entranceFeeTotal.toStringAsFixed(entranceFeeTotal.truncateToDouble() == entranceFeeTotal ? 0 : 2)} ETB';
 
   String get dateRangeLabel {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -54,6 +66,9 @@ class TouristTrip {
       endDate: parse(data['endDate']),
       placeIds: data['placeIds'] != null ? List<String>.from(data['placeIds']) : [],
       status: data['status'] as String? ?? 'planning',
+      entranceFeeTotal: ((data['entranceFeeTotal'] ?? 0) as num).toDouble(),
+      entrancePaymentStatus: data['entrancePaymentStatus'] as String? ?? 'unpaid',
+      entrancePaymentId: data['entrancePaymentId'] as String?,
       createdAt: parseNullable(data['createdAt']),
     );
   }
@@ -67,6 +82,9 @@ class TouristTrip {
       'endDate': Timestamp.fromDate(endDate),
       'placeIds': placeIds,
       'status': status,
+      'entranceFeeTotal': entranceFeeTotal,
+      'entrancePaymentStatus': entrancePaymentStatus,
+      'entrancePaymentId': entrancePaymentId,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
@@ -77,6 +95,9 @@ class TouristTrip {
     DateTime? endDate,
     List<String>? placeIds,
     String? status,
+    double? entranceFeeTotal,
+    String? entrancePaymentStatus,
+    String? entrancePaymentId,
   }) {
     return TouristTrip(
       id: id,
@@ -87,6 +108,9 @@ class TouristTrip {
       endDate: endDate ?? this.endDate,
       placeIds: placeIds ?? this.placeIds,
       status: status ?? this.status,
+      entranceFeeTotal: entranceFeeTotal ?? this.entranceFeeTotal,
+      entrancePaymentStatus: entrancePaymentStatus ?? this.entrancePaymentStatus,
+      entrancePaymentId: entrancePaymentId ?? this.entrancePaymentId,
       createdAt: createdAt,
     );
   }

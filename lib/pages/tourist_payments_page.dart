@@ -75,8 +75,9 @@ class TouristPaymentsPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final p = list[index];
 
-              final isCompleted = p.status == 'completed' || p.status == 'paid';
-              final isFailed = p.status == 'failed';
+              final isCompleted = p.status == 'completed' || p.status == 'verified' || p.status == 'paid';
+              final isFailed = p.status == 'failed' || p.status == 'rejected';
+
               final statusColor = isCompleted
                   ? Colors.green.shade700
                   : isFailed
@@ -87,6 +88,12 @@ class TouristPaymentsPage extends StatelessWidget {
                   : isFailed
                       ? Colors.red.shade50
                       : Colors.orange.shade50;
+
+              final statusLabel = isCompleted
+                  ? 'VERIFIED'
+                  : isFailed
+                      ? (p.status == 'rejected' ? 'REJECTED' : 'FAILED')
+                      : 'PENDING VERIFICATION';
 
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 6),
@@ -105,22 +112,26 @@ class TouristPaymentsPage extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: Colors.teal.shade50,
+                                  color: p.isEntranceFee ? Colors.amber.shade50 : Colors.teal.shade50,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(Icons.payment, color: Colors.teal.shade800, size: 20),
+                                child: Icon(
+                                  p.isEntranceFee ? Icons.confirmation_number_outlined : Icons.payment,
+                                  color: p.isEntranceFee ? Colors.amber.shade900 : Colors.teal.shade800,
+                                  size: 20,
+                                ),
                               ),
                               const SizedBox(width: 10),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    p.formattedMethod,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                    p.title.isNotEmpty ? p.title : p.formattedMethod,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                   ),
                                   if (p.createdAt != null)
                                     Text(
-                                      '${p.createdAt!.day}/${p.createdAt!.month}/${p.createdAt!.year}',
+                                      '${p.formattedMethod} • ${p.createdAt!.day}/${p.createdAt!.month}/${p.createdAt!.year}',
                                       style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                                     ),
                                 ],
@@ -128,23 +139,37 @@ class TouristPaymentsPage extends StatelessWidget {
                             ],
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: statusBg,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                             ),
                             child: Text(
-                              p.status.toUpperCase(),
+                              statusLabel,
                               style: TextStyle(
                                 color: statusColor,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 11,
+                                fontSize: 10,
                               ),
                             ),
                           ),
                         ],
                       ),
+                      if (p.adminNotes != null && p.adminNotes!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Admin note: ${p.adminNotes}',
+                            style: const TextStyle(fontSize: 11, color: Colors.red),
+                          ),
+                        ),
+                      ],
                       const Divider(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,

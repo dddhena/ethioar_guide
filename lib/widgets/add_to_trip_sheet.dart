@@ -55,10 +55,17 @@ class _AddToTripSheetState extends State<AddToTripSheet> {
     final uid = _auth.currentUser?.uid;
     if (uid == null || _selectedTripId == null) return;
     setState(() => _adding = true);
+
+    final selectedTrip = _trips.firstWhere((t) => t.id == _selectedTripId, orElse: () => _trips.first);
+    final updatedFee = selectedTrip.placeIds.contains(widget.landmark.id)
+        ? selectedTrip.entranceFeeTotal
+        : selectedTrip.entranceFeeTotal + widget.landmark.entranceFee;
+
     await _tripService.addPlaceToTrip(
       touristId: uid,
       tripId: _selectedTripId!,
       placeId: widget.landmark.id,
+      newEntranceFeeTotal: updatedFee,
     );
     if (mounted) {
       Navigator.pop(context);

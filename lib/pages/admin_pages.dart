@@ -22,6 +22,7 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
   final _cityController = TextEditingController();
   final _categoryController = TextEditingController(text: 'heritage');
   final _imageUrlController = TextEditingController();
+  final _entranceFeeController = TextEditingController(text: '0');
   final _latitudeController = TextEditingController();
   final _longitudeController = TextEditingController();
   bool _saving = false;
@@ -60,6 +61,7 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
       _cityController.text = lm.city;
       _categoryController.text = lm.category;
       _imageUrlController.text = lm.imageUrl;
+      _entranceFeeController.text = lm.entranceFee > 0 ? lm.entranceFee.toStringAsFixed(0) : '0';
       _latitudeController.text = lm.latitude.toString();
       _longitudeController.text = lm.longitude.toString();
       _locationPicked = true;
@@ -85,6 +87,7 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
       final city = _cityController.text;
       final category = _categoryController.text;
       final imageUrl = _imageUrlController.text.trim();
+      final entranceFee = double.tryParse(_entranceFeeController.text.trim()) ?? 0.0;
 
       if (widget.id != null) {
         await FirestoreService().updateLandmark(
@@ -96,6 +99,7 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
           city: city,
           category: category,
           imageUrl: imageUrl,
+          entranceFee: entranceFee,
         );
       } else {
         await FirestoreService().addLandmark(
@@ -106,6 +110,7 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
           city: city,
           category: category,
           imageUrl: imageUrl,
+          entranceFee: entranceFee,
         );
       }
 
@@ -131,6 +136,7 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
     _cityController.dispose();
     _categoryController.dispose();
     _imageUrlController.dispose();
+    _entranceFeeController.dispose();
     _latitudeController.dispose();
     _longitudeController.dispose();
     super.dispose();
@@ -186,6 +192,22 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _entranceFeeController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Entrance / Admission Fee (ETB)',
+                hintText: 'e.g. 200 (or 0 for free entry)',
+                prefixIcon: Icon(Icons.confirmation_number_outlined),
+                suffixText: 'ETB',
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return null;
+                if (double.tryParse(v.trim()) == null) return 'Please enter a valid amount';
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             // ── Photo / Image URL section ──────────────────────────
