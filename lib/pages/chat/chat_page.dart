@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'dart:html' as html;
+import '../../utils/web_helpers.dart';
 import '../../models/chat.dart';
 import '../../services/auth_service.dart';
 import '../../services/chat_service.dart';
@@ -277,7 +277,7 @@ class _ChatPageState extends State<ChatPage> {
                                 onPressed: () {
                                   final url = 'https://www.google.com/maps/search/?api=1&query=${m.latitude},${m.longitude}';
                                   if (kIsWeb) {
-                                    html.window.open(url, '_blank');
+                                    openWebUrl(url);
                                   }
                                 },
                               ),

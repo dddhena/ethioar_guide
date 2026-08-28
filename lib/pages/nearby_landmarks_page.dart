@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'dart:html' as html;
+import '../utils/web_helpers.dart';
 
 import '../models/landmark.dart';
 import '../services/firestore_service.dart';
@@ -10,6 +10,7 @@ import '../widgets/app_scaffold.dart';
 import '../widgets/snackbar_helper.dart';
 import 'camera_preview.dart';
 import 'map_picker.dart';
+import 'navigation/route_preview_page.dart';
 
 class NearbyLandmarksPage extends StatefulWidget {
   final LatLng? initialLocation;
@@ -89,7 +90,7 @@ class _NearbyLandmarksPageState extends State<NearbyLandmarksPage> {
   void _openGoogleMapsNavigation(double lat, double lon) {
     final url = 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lon';
     if (kIsWeb) {
-      html.window.open(url, '_blank');
+      openWebUrl(url);
     } else {
       SnackbarHelper.show(context, 'Navigating to: $lat, $lon');
     }
@@ -488,9 +489,20 @@ class _NearbyLandmarksPageState extends State<NearbyLandmarksPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     visualDensity: VisualDensity.compact,
                   ),
-                  icon: const Icon(Icons.directions, size: 14),
-                  label: const Text('Navigate', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  onPressed: () => _openGoogleMapsNavigation(lm.latitude, lm.longitude),
+                  icon: const Icon(Icons.route_rounded, size: 14),
+                  label: const Text('Route Preview', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => RoutePreviewPage(
+                          destinationLandmark: lm,
+                          destinationTitle: lm.name,
+                          customStartLocation: LatLng(_currentLat, _currentLon),
+                          contextMode: JourneyContext.arDiscovery,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

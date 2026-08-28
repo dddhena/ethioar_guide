@@ -3,6 +3,7 @@ import '../../models/tour_package.dart';
 import '../../services/guide_service.dart';
 import '../../theme/ethio_theme.dart';
 import '../../widgets/app_scaffold.dart';
+import '../navigation/route_preview_page.dart';
 
 class GuidedToursBrowsePage extends StatelessWidget {
   const GuidedToursBrowsePage({super.key});
@@ -82,6 +83,30 @@ class _TourCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(color: EthioColors.forest),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: EthioColors.forest,
+                side: const BorderSide(color: EthioColors.forest),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => RoutePreviewPage(
+                      guidedTour: tour,
+                      destinationTitle: tour.name,
+                      contextMode: JourneyContext.guidedJourney,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.alt_route_rounded, size: 18),
+              label: const Text('Preview Tour Itinerary Route', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
           ),
         ],
       ),

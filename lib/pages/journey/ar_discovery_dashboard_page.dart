@@ -23,6 +23,7 @@ import '../profile_page.dart';
 import '../providers/my_reservations_page.dart';
 import '../providers/service_providers_list_page.dart';
 import '../trips_page.dart';
+import '../navigation/route_preview_page.dart';
 import 'choose_journey_page.dart';
 import 'guided_journey_dashboard_page.dart';
 
@@ -280,7 +281,10 @@ class _ArDiscoveryDashboardPageState extends State<ArDiscoveryDashboardPage> {
                     title: 'AR Navigation',
                     subtitle: 'Find your way',
                     accent: EthioColors.stone,
-                    onTap: () => _push(const ARGuidePage()),
+                    onTap: () => _push(const RoutePreviewPage(
+                      destinationTitle: 'Fasil Ghebbi',
+                      contextMode: JourneyContext.arDiscovery,
+                    )),
                   ),
                 ),
               ],

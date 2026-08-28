@@ -14,6 +14,7 @@ import '../services/trip_service.dart';
 import '../services/weather_service.dart';
 import '../theme/ethio_theme.dart';
 import '../widgets/add_to_trip_sheet.dart';
+import '../widgets/api_gateway_settings_modal.dart';
 import '../widgets/notification_bell_button.dart';
 import '../widgets/place_image.dart';
 import 'create_trip_page.dart';
@@ -569,61 +570,9 @@ class _AiGuidePageState extends State<AiGuidePage> {
     );
   }
 
-  void _showApiKeyDialog() {
-    final keyCtrl = TextEditingController(text: ApiConfig.geminiApiKey);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.auto_awesome, color: EthioColors.forest),
-            SizedBox(width: 8),
-            Text('Gemini API Key', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter your Google Gemini API key to activate real-time AI responses:',
-              style: TextStyle(fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: keyCtrl,
-              decoration: const InputDecoration(
-                hintText: 'AIzaSy...',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.key),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: EthioColors.forest, foregroundColor: Colors.white),
-            onPressed: () {
-              ApiConfig.customApiKey = keyCtrl.text.trim();
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(ApiConfig.hasGeminiKey
-                      ? 'Gemini API Key connected successfully! ✨'
-                      : 'Key cleared.'),
-                ),
-              );
-              setState(() {});
-            },
-            child: const Text('Save Key'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _showApiKeyDialog() async {
+    await ApiGatewaySettingsModal.show(context, initialTabIndex: 0);
+    if (mounted) setState(() {});
   }
 
   @override

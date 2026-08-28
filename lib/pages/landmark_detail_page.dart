@@ -9,6 +9,7 @@ import '../widgets/add_to_trip_sheet.dart';
 import '../widgets/explore_categories.dart';
 import '../widgets/favorite_button.dart';
 import '../widgets/place_image.dart';
+import 'navigation/route_preview_page.dart';
 
 class LandmarkDetailPage extends StatelessWidget {
   final Landmark landmark;
@@ -102,6 +103,29 @@ class LandmarkDetailPage extends StatelessWidget {
             const SizedBox(height: 16),
             Text(landmark.description, style: const TextStyle(fontSize: 16, height: 1.5)),
             const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: EthioColors.forest,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => RoutePreviewPage(
+                      destinationLandmark: landmark,
+                      destinationTitle: landmark.name,
+                      contextMode: JourneyContext.arDiscovery,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.route_rounded),
+              label: const Text('Preview Route & AR Journey', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(child: FavoriteButton(attractionId: landmark.id)),

@@ -28,6 +28,7 @@ import '../trips_page.dart';
 import 'ar_discovery_dashboard_page.dart';
 import 'choose_journey_page.dart';
 import 'guided_tours_browse_page.dart';
+import '../navigation/route_preview_page.dart';
 
 class GuidedJourneyDashboardPage extends StatefulWidget {
   const GuidedJourneyDashboardPage({super.key});
@@ -187,6 +188,19 @@ class _GuidedJourneyDashboardPageState extends State<GuidedJourneyDashboardPage>
                     subtitle: 'Your tour plans',
                     accent: EthioColors.stone,
                     onTap: () => _push(const MyGuideBookingsPage()),
+                  ),
+                ),
+                SizedBox(
+                  width: cardWidth,
+                  child: DashboardFeatureCard(
+                    icon: Icons.alt_route_rounded,
+                    title: 'Route Preview',
+                    subtitle: 'Preview journey',
+                    accent: EthioColors.forestLight,
+                    onTap: () => _push(const RoutePreviewPage(
+                      destinationTitle: 'Fasil Ghebbi & Gondar Castles',
+                      contextMode: JourneyContext.guidedJourney,
+                    )),
                   ),
                 ),
                 SizedBox(

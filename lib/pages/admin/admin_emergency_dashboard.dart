@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'dart:html' as html;
+import '../../utils/web_helpers.dart';
 import '../../models/emergency_alert.dart';
 import '../../services/auth_service.dart';
 import '../../services/emergency_service.dart';
@@ -32,7 +32,7 @@ class _AdminEmergencyDashboardState extends State<AdminEmergencyDashboard> {
   void _openInGoogleMaps(double lat, double lng) {
     final url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
     if (kIsWeb) {
-      html.window.open(url, '_blank');
+      openWebUrl(url);
     }
   }
 

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../config/api_config.dart';
 import '../models/user_profile.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../widgets/api_gateway_settings_modal.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/snackbar_helper.dart';
 import 'login_page.dart';
@@ -23,11 +25,9 @@ class _ProfilePageState extends State<ProfilePage> {
     'default': Icons.person,
     'explorer': Icons.explore,
     'camera': Icons.camera_alt,
-    'hiking': Icons.hiking,
-    'landscape': Icons.landscape,
-    'castle': Icons.fort,
-    'flight': Icons.flight_takeoff,
-    'star': Icons.star,
+    'hiker': Icons.hiking,
+    'guide': Icons.map,
+    'crown': Icons.stars,
   };
 
   @override
@@ -78,6 +78,11 @@ class _ProfilePageState extends State<ProfilePage> {
           title: 'My Profile',
           actions: [
             IconButton(
+              icon: const Icon(Icons.tune),
+              tooltip: 'API & Gateway Settings',
+              onPressed: () => ApiGatewaySettingsModal.show(context),
+            ),
+            IconButton(
               icon: const Icon(Icons.edit),
               tooltip: 'Edit Profile',
               onPressed: () => _showEditProfileDialog(context, profile),
@@ -92,6 +97,10 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 8),
               _buildInfoCard(context, profile),
               const SizedBox(height: 20),
+              _buildSectionTitle(context, 'API & Payment Gateways'),
+              const SizedBox(height: 8),
+              _buildApiGatewaysCard(context),
+              const SizedBox(height: 20),
               _buildSectionTitle(context, 'Account & Security'),
               const SizedBox(height: 8),
               _buildSecurityCard(context, profile),
@@ -101,6 +110,62 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildApiGatewaysCard(BuildContext context) {
+    final hasGemini = ApiConfig.hasGeminiKey;
+    final isDarajaSbx = ApiConfig.isDarajaSandbox;
+    final isTelebirrSbx = ApiConfig.isTelebirrSandbox;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        children: [
+          ListTile(
+            leading: CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.green.shade50,
+              child: Icon(Icons.payment, size: 20, color: Colors.green.shade700),
+            ),
+            title: const Text('Safaricom Daraja (M-Pesa)', style: TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text(isDarajaSbx ? 'Sandbox Mode (Free Testing)' : 'Live Production Gateway', style: const TextStyle(fontSize: 12)),
+            trailing: Chip(
+              label: Text(isDarajaSbx ? 'Sandbox' : 'Live', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              backgroundColor: isDarajaSbx ? Colors.green.shade100 : Colors.teal.shade100,
+            ),
+            onTap: () => ApiGatewaySettingsModal.show(context, initialTabIndex: 1),
+          ),
+          const Divider(height: 1, indent: 56),
+          ListTile(
+            leading: CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.blue.shade50,
+              child: Icon(Icons.phone_android, size: 20, color: Colors.blue.shade700),
+            ),
+            title: const Text('Telebirr Developer Gateway', style: TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text(isTelebirrSbx ? 'Developer Sandbox Active' : 'Live Production Gateway', style: const TextStyle(fontSize: 12)),
+            trailing: Chip(
+              label: Text(isTelebirrSbx ? 'Sandbox' : 'Live', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              backgroundColor: isTelebirrSbx ? Colors.blue.shade100 : Colors.teal.shade100,
+            ),
+            onTap: () => ApiGatewaySettingsModal.show(context, initialTabIndex: 2),
+          ),
+          const Divider(height: 1, indent: 56),
+          ListTile(
+            leading: CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.amber.shade50,
+              child: Icon(Icons.auto_awesome, size: 20, color: Colors.amber.shade800),
+            ),
+            title: const Text('Google Gemini AI Key', style: TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text(hasGemini ? 'Custom API Key Connected' : 'Offline Guide Mode Active', style: const TextStyle(fontSize: 12)),
+            trailing: Icon(hasGemini ? Icons.check_circle : Icons.key_outlined, color: hasGemini ? Colors.green : Colors.amber.shade800, size: 20),
+            onTap: () => ApiGatewaySettingsModal.show(context, initialTabIndex: 0),
+          ),
+        ],
+      ),
     );
   }
 

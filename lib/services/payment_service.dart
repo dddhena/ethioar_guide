@@ -1,28 +1,64 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../config/api_config.dart';
 import '../models/payment.dart';
+import '../services/daraja_service.dart';
 import '../services/notification_service.dart';
+import '../services/telebirr_service.dart';
 import '../services/trip_service.dart';
 
 class PaymentService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final DarajaService _daraja = DarajaService();
+  final TelebirrService _telebirr = TelebirrService();
 
   static String generateTransactionReference(String paymentMethod) {
     final randomDigits = Random().nextInt(900000) + 100000;
     switch (paymentMethod.toLowerCase()) {
       case 'telebirr':
-        return 'TB-$randomDigits';
+        return 'TB-ET-$randomDigits';
       case 'cbe_birr':
       case 'cbebirr':
-        return 'CBE-$randomDigits';
+        return 'CBE-ET-$randomDigits';
       case 'daraja_mpesa':
       case 'mpesa':
-        return 'SAF-MPESA-$randomDigits';
+      case 'daraja':
+        return 'SAF-MPESA-ET-$randomDigits';
       case 'card':
-        return 'CARD-$randomDigits';
+        return 'CARD-ET-$randomDigits';
       default:
-        return 'TX-$randomDigits';
+        return 'TX-ET-$randomDigits';
     }
+  }
+
+  /// Initiates a Daraja STK Push for Safaricom M-Pesa.
+  Future<DarajaStkResponse> initiateDarajaStkPush({
+    required String phone,
+    required double amount,
+    required String accountReference,
+    String description = 'EthioAR Guide Booking Payment',
+  }) async {
+    return await _daraja.initiateStkPush(
+      phone: phone,
+      amount: amount,
+      accountReference: accountReference,
+      transactionDesc: description,
+    );
+  }
+
+  /// Initiates a Telebirr Developer Sandbox / Live payment request.
+  Future<TelebirrPaymentResponse> initiateTelebirrPayment({
+    required String phone,
+    required double amount,
+    required String orderId,
+    String title = 'EthioAR Guide Tour Reservation',
+  }) async {
+    return await _telebirr.initiatePayment(
+      phone: phone,
+      amount: amount,
+      orderId: orderId,
+      title: title,
+    );
   }
 
   /// Creates a payment for tourism place entrance fees submitted by a tourist.
@@ -43,6 +79,9 @@ class PaymentService {
         ? transactionId.trim()
         : generateTransactionReference(paymentMethod);
 
+    final isSandbox = (paymentMethod == 'daraja_mpesa' && ApiConfig.isDarajaSandbox) ||
+        (paymentMethod == 'telebirr' && ApiConfig.isTelebirrSandbox);
+
     final paymentDoc = await _db.collection('payments').add({
       'userId': userId,
       'bookingId': tripId,
@@ -56,6 +95,7 @@ class PaymentService {
       'transactionId': txId,
       'status': 'pending', // Starts pending for Admin verification
       'paymentType': 'entrance_fee',
+      'isSandbox': isSandbox,
       'receiptUrl': receiptUrl.isNotEmpty ? receiptUrl : 'https://receipts.ethioar.guide/tx/$txId',
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -126,27 +166,33 @@ class PaymentService {
     }
   }
 
-  /// Initiates a Daraja STK push for the given reservation.
-  /// Returns the checkout request ID or simulated transaction ID.
+  /// Initiates a payment for provider services (hotel, dining, tour).
+  /// Returns the payment document ID.
   Future<String> initiatePayment({
     required String reservationId,
     required double amount,
     required String userId,
     String paymentMethod = 'daraja_mpesa',
     String phone = '',
+    String transactionId = '',
+    String providerId = '',
   }) async {
-    final checkoutId = generateTransactionReference(paymentMethod);
+    final txId = transactionId.isNotEmpty ? transactionId : generateTransactionReference(paymentMethod);
+    final isSandbox = (paymentMethod == 'daraja_mpesa' && ApiConfig.isDarajaSandbox) ||
+        (paymentMethod == 'telebirr' && ApiConfig.isTelebirrSandbox);
 
     final paymentDoc = await _db.collection('payments').add({
       'userId': userId,
       'bookingId': reservationId,
       'reservationId': reservationId,
+      'providerId': providerId,
       'amount': amount,
       'paymentMethod': paymentMethod,
-      'transactionId': checkoutId,
+      'transactionId': txId,
       'status': 'completed',
+      'isSandbox': isSandbox,
       'paymentType': 'provider_service',
-      'receiptUrl': 'https://receipts.ethioar.guide/tx/$checkoutId',
+      'receiptUrl': 'https://receipts.ethioar.guide/tx/$txId',
       'createdAt': FieldValue.serverTimestamp(),
     });
 

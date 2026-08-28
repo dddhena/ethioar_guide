@@ -1,7 +1,5 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:html' as html;
-import 'dart:js_interop';
-import 'dart:js_interop_unsafe';
+import '../utils/web_helpers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/emergency_alert.dart';
 import 'notification_service.dart';
@@ -149,63 +147,14 @@ class EmergencyService {
   /// Request browser/system notification permission for background alerting
   Future<void> requestBackgroundNotificationPermission() async {
     if (kIsWeb) {
-      try {
-        if (html.Notification.permission != 'granted') {
-          await html.Notification.requestPermission();
-        }
-      } catch (_) {}
+      await requestWebNotificationPermission();
     }
   }
 
   /// Fire an out-of-app OS / Browser notification even if the tab is minimized
   void showSystemBackgroundNotification(String title, String body) {
     if (kIsWeb) {
-      try {
-        if (html.Notification.permission == 'granted') {
-          html.Notification(
-            title,
-            body: body,
-            icon: 'favicon.png',
-          );
-        }
-      } catch (_) {}
-
-      _playEmergencyTone();
+      showWebNotification(title, body);
     }
-  }
-
-  /// Short siren via the browser Web Audio API (`AudioContext` is not in dart:html).
-  void _playEmergencyTone() {
-    try {
-      final ctor = globalContext.getProperty<JSFunction?>(
-            'AudioContext'.toJS,
-          ) ??
-          globalContext.getProperty<JSFunction?>(
-            'webkitAudioContext'.toJS,
-          );
-      if (ctor == null) return;
-
-      final audioCtx = ctor.callAsConstructor<JSObject>();
-      final osc = audioCtx.callMethod<JSObject>('createOscillator'.toJS);
-      final gain = audioCtx.callMethod<JSObject>('createGain'.toJS);
-
-      osc.setProperty('type'.toJS, 'sawtooth'.toJS);
-      osc
-          .getProperty<JSObject>('frequency'.toJS)
-          .setProperty('value'.toJS, 880.toJS);
-      gain.getProperty<JSObject>('gain'.toJS).setProperty('value'.toJS, 0.3.toJS);
-
-      osc.callMethod('connect'.toJS, gain);
-      gain.callMethod(
-        'connect'.toJS,
-        audioCtx.getProperty('destination'.toJS),
-      );
-      osc.callMethod('start'.toJS);
-
-      Future.delayed(const Duration(milliseconds: 600), () {
-        osc.callMethod('stop'.toJS);
-        audioCtx.callMethod('close'.toJS);
-      });
-    } catch (_) {}
   }
 }

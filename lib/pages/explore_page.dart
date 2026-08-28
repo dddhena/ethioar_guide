@@ -24,6 +24,7 @@ import 'providers/service_providers_list_page.dart';
 import 'recommendations_page.dart';
 import 'trips_page.dart';
 import 'ai_guide_page.dart';
+import 'tourist_payments_page.dart';
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -251,6 +252,13 @@ class _ExplorePageState extends State<ExplorePage> {
                           label: 'AI Guide',
                           color: Colors.amber.shade800,
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AiGuidePage())),
+                        ),
+                        const SizedBox(width: 10),
+                        _QuickShortcutChip(
+                          icon: Icons.account_balance_wallet_outlined,
+                          label: 'Payments',
+                          color: Colors.blue.shade700,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TouristPaymentsPage())),
                         ),
                       ],
                     ),

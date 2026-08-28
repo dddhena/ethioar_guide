@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/landmark.dart';
 
-// Conditional import for web geolocation without breaking native builds
-import 'dart:html' as html;
 
 class CityLocation {
   final String name;
@@ -160,20 +160,72 @@ class LocationService {
     return list;
   }
 
-  /// Attempt to fetch user position from browser geolocation with timeout.
+  /// Attempt to fetch user position from browser/device geolocation.
   static Future<Map<String, double>?> getCurrentPositionWeb() async {
-    if (!kIsWeb) return null;
-
     try {
-      final geo = html.window.navigator.geolocation;
-      final pos = await geo.getCurrentPosition();
-      final lat = (pos.coords?.latitude ?? 0.0).toDouble();
-      final lon = (pos.coords?.longitude ?? 0.0).toDouble();
-      if (lat != 0.0 || lon != 0.0) {
-        return {'latitude': lat, 'longitude': lon};
-      }
+      final pos = await Geolocator.getCurrentPosition(
+        timeLimit: const Duration(seconds: 5),
+      );
+      return {'latitude': pos.latitude, 'longitude': pos.longitude};
     } catch (_) {
-      // Browser geolocation denied or timed out
+      return null;
+    }
+  }
+
+  /// Safely resolves the user's current live GPS / Geolocation coordinate across platforms.
+  static Future<LatLng?> getCurrentUserLocation() async {
+    // 1. Try web geolocation directly if on Web
+    if (kIsWeb) {
+      final webCoords = await getCurrentPositionWeb();
+      if (webCoords != null) {
+        return LatLng(webCoords['latitude']!, webCoords['longitude']!);
+      }
+    }
+
+    // 2. Try Geolocator with permissions
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled && !kIsWeb) {
+        return null;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+          if (kIsWeb) {
+            final webCoords = await getCurrentPositionWeb();
+            if (webCoords != null) {
+              return LatLng(webCoords['latitude']!, webCoords['longitude']!);
+            }
+          }
+          return null;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        return null;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 8),
+      );
+
+      return LatLng(position.latitude, position.longitude);
+    } catch (_) {
+      try {
+        if (kIsWeb) {
+          final webCoords = await getCurrentPositionWeb();
+          if (webCoords != null) {
+            return LatLng(webCoords['latitude']!, webCoords['longitude']!);
+          }
+        }
+        final lastPos = await Geolocator.getLastKnownPosition();
+        if (lastPos != null) {
+          return LatLng(lastPos.latitude, lastPos.longitude);
+        }
+      } catch (_) {}
     }
     return null;
   }

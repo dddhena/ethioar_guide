@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/api_config.dart';
 import '../models/landmark.dart';
 import '../models/trip.dart';
 import '../services/auth_service.dart';
@@ -6,6 +7,7 @@ import '../services/firestore_service.dart';
 import '../services/payment_service.dart';
 import '../services/trip_service.dart';
 import '../theme/ethio_theme.dart';
+import '../widgets/api_gateway_settings_modal.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/place_image.dart';
 import 'landmark_detail_page.dart';
@@ -223,8 +225,28 @@ class _TripDetailPageState extends State<TripDetailPage> {
                   const SizedBox(height: 16),
 
                   // Method Selection
-                  const Text('Select Payment Method:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Select Payment Method:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        onPressed: () async {
+                          await ApiGatewaySettingsModal.show(
+                            context,
+                            initialTabIndex: selectedMethod == 'daraja_mpesa' ? 1 : 2,
+                          );
+                          setModalState(() {});
+                        },
+                        icon: const Icon(Icons.settings, size: 14, color: EthioColors.forest),
+                        label: const Text('Gateway API', style: TextStyle(fontSize: 11, color: EthioColors.forest)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       Expanded(

@@ -84,69 +84,71 @@ class _AddToTripSheetState extends State<AddToTripSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: EthioColors.divider,
-                borderRadius: BorderRadius.circular(2),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: EthioColors.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text('Add to Trip', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text(widget.landmark.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 20),
-          const Text('Select a trip', style: TextStyle(color: EthioColors.muted)),
-          const SizedBox(height: 12),
-          if (_loading)
-            const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
-          else if (_trips.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                'No trips yet. Create one to start planning.',
-                style: TextStyle(color: Colors.grey.shade600),
+            const SizedBox(height: 16),
+            Text('Add to Trip', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(widget.landmark.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 20),
+            const Text('Select a trip', style: TextStyle(color: EthioColors.muted)),
+            const SizedBox(height: 12),
+            if (_loading)
+              const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
+            else if (_trips.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'No trips yet. Create one to start planning.',
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+              )
+            else
+              ..._trips.map((trip) => RadioListTile<String>(
+                    value: trip.id,
+                    groupValue: _selectedTripId,
+                    onChanged: (v) => setState(() => _selectedTripId = v),
+                    title: Text(trip.name),
+                    subtitle: Text(trip.dateRangeLabel),
+                    contentPadding: EdgeInsets.zero,
+                  )),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _createNewTrip,
+                icon: const Icon(Icons.add),
+                label: const Text('Create New Trip'),
               ),
-            )
-          else
-            ..._trips.map((trip) => RadioListTile<String>(
-                  value: trip.id,
-                  groupValue: _selectedTripId,
-                  onChanged: (v) => setState(() => _selectedTripId = v),
-                  title: Text(trip.name),
-                  subtitle: Text(trip.dateRangeLabel),
-                  contentPadding: EdgeInsets.zero,
-                )),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: _createNewTrip,
-              icon: const Icon(Icons.add),
-              label: const Text('Create New Trip'),
             ),
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: (_adding || _selectedTripId == null) ? null : _add,
-            child: _adding
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Add to Trip'),
-          ),
-        ],
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: (_adding || _selectedTripId == null) ? null : _add,
+              child: _adding
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Add to Trip'),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'dart:html' as html;
+import '../../utils/web_helpers.dart';
 import '../../models/service_provider.dart';
 import '../../models/provider_service.dart';
 import '../../services/service_provider_service.dart';
@@ -51,7 +51,7 @@ class _ProviderDetailsPageState extends State<ProviderDetailsPage> {
     final lon = widget.provider.longitude;
     final url = 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lon';
     if (kIsWeb) {
-      html.window.open(url, '_blank');
+      openWebUrl(url);
     }
   }
 

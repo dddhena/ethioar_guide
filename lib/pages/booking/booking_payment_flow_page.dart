@@ -1,11 +1,14 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../config/api_config.dart';
 import '../../models/service_provider.dart';
 import '../../models/provider_service.dart';
 import '../../models/reservation.dart';
 import '../../models/payment.dart';
 import '../../services/auth_service.dart';
+import '../../services/daraja_service.dart';
+import '../../services/payment_service.dart';
 import '../../services/service_provider_service.dart';
+import '../../widgets/api_gateway_settings_modal.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/snackbar_helper.dart';
 import '../providers/my_reservations_page.dart';
@@ -44,7 +47,6 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
   final TextEditingController _paymentPhoneCtrl = TextEditingController();
 
   // Step 4 & 5 Processing / Result
-  bool _isProcessing = false;
   String _processingStatusText = 'Initiating transaction...';
   bool _paymentSuccess = false;
   String _transactionId = '';
@@ -99,40 +101,94 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
   // ==========================================
 
   Future<void> _processPayment() async {
+    final phone = _paymentPhoneCtrl.text.trim();
+    if (phone.isEmpty && (_selectedMethod == 'daraja_mpesa' || _selectedMethod == 'telebirr')) {
+      SnackbarHelper.show(context, 'Please enter your phone number to receive the payment prompt.');
+      return;
+    }
+
     setState(() {
-      _isProcessing = true;
       _currentStep = 3;
       _processingStatusText = _selectedMethod == 'daraja_mpesa'
-          ? 'Connecting to Safaricom Daraja M-Pesa Gateway...'
-          : 'Connecting to Payment Gateway...';
+          ? 'Connecting to Safaricom Daraja ${ApiConfig.isDarajaSandbox ? "Sandbox" : "Live"} Gateway...'
+          : _selectedMethod == 'telebirr'
+              ? 'Connecting to Telebirr Developer ${ApiConfig.isTelebirrSandbox ? "Sandbox" : "Live"} Gateway...'
+              : 'Connecting to Payment Gateway...';
       _errorMessage = null;
     });
 
     try {
       // Step A: STK push prompt initiation
-      await Future.delayed(const Duration(seconds: 1));
-      if (!mounted) return;
-      setState(() {
-        _processingStatusText = _selectedMethod == 'daraja_mpesa'
-            ? 'STK Push sent to ${_paymentPhoneCtrl.text.trim()}! Please enter PIN on phone...'
-            : 'Sending authentication prompt to mobile wallet...';
-      });
+      if (_selectedMethod == 'daraja_mpesa') {
+        final darajaRes = await PaymentService().initiateDarajaStkPush(
+          phone: phone,
+          amount: _calculatedTotal,
+          accountReference: widget.serviceItem.name,
+          description: 'Payment for ${widget.serviceItem.name} at ${widget.provider.businessName}',
+        );
 
-      // Show simulated STK PIN popup for Daraja M-Pesa if user is on mobile/web
-      if (_selectedMethod == 'daraja_mpesa' || _selectedMethod == 'telebirr') {
-        final authorized = await _showStkPinSimulationDialog();
+        if (!mounted) return;
+        setState(() {
+          _processingStatusText = darajaRes.isSandboxSimulation
+              ? 'Daraja Sandbox: STK Push sent to $phone! Enter PIN on phone...'
+              : 'Safaricom STK Push sent to $phone! Enter PIN on phone...';
+        });
+
+        // Show simulated STK PIN popup for Daraja M-Pesa
+        final authorized = await _showStkPinSimulationDialog(
+          title: 'Safaricom M-Pesa PIN',
+          subtitle: 'STK Push (Ref: ${darajaRes.checkoutRequestId})',
+          isDaraja: true,
+        );
+
         if (!authorized) {
           if (!mounted) return;
           setState(() {
-            _isProcessing = false;
             _paymentSuccess = false;
             _currentStep = 4;
             _errorMessage = 'Payment was cancelled or PIN was entered incorrectly.';
           });
           return;
         }
+
+        _transactionId = darajaRes.isSandboxSimulation
+            ? PaymentService.generateTransactionReference('daraja_mpesa')
+            : (darajaRes.checkoutRequestId.isNotEmpty ? darajaRes.checkoutRequestId : PaymentService.generateTransactionReference('daraja_mpesa'));
+      } else if (_selectedMethod == 'telebirr') {
+        final telebirrRes = await PaymentService().initiateTelebirrPayment(
+          phone: phone,
+          amount: _calculatedTotal,
+          orderId: 'ORD-${DateTime.now().millisecondsSinceEpoch}',
+          title: widget.serviceItem.name,
+        );
+
+        if (!mounted) return;
+        setState(() {
+          _processingStatusText = telebirrRes.isSandboxSimulation
+              ? 'Telebirr Developer Sandbox: USSD Prompt sent to $phone! Enter PIN...'
+              : 'Telebirr prompt sent to $phone! Enter PIN...';
+        });
+
+        final authorized = await _showStkPinSimulationDialog(
+          title: 'Telebirr USSD PIN',
+          subtitle: 'Developer Sandbox Authorization',
+          isDaraja: false,
+        );
+
+        if (!authorized) {
+          if (!mounted) return;
+          setState(() {
+            _paymentSuccess = false;
+            _currentStep = 4;
+            _errorMessage = 'Telebirr authorization was cancelled.';
+          });
+          return;
+        }
+
+        _transactionId = telebirrRes.transactionId;
       } else {
         await Future.delayed(const Duration(seconds: 2));
+        _transactionId = PaymentService.generateTransactionReference(_selectedMethod);
       }
 
       if (!mounted) return;
@@ -140,18 +196,7 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
         _processingStatusText = 'Verifying transaction with gateway...';
       });
 
-      await Future.delayed(const Duration(milliseconds: 1200));
-
-      // Generate unique Ethiopian payment reference
-      final randomDigits = Random().nextInt(900000) + 100000;
-      final txPrefix = _selectedMethod == 'daraja_mpesa'
-          ? 'SAF-MPESA-ET'
-          : _selectedMethod == 'telebirr'
-              ? 'TB-ET'
-              : _selectedMethod == 'cbe_birr'
-                  ? 'CBE-ET'
-                  : 'CARD-ET';
-      _transactionId = '$txPrefix-$randomDigits';
+      await Future.delayed(const Duration(milliseconds: 900));
 
       final user = _auth.currentUser;
       final touristUid = user?.uid ?? 'tourist-${DateTime.now().millisecondsSinceEpoch}';
@@ -196,14 +241,12 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
 
       if (!mounted) return;
       setState(() {
-        _isProcessing = false;
         _paymentSuccess = true;
         _currentStep = 4;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _isProcessing = false;
         _paymentSuccess = false;
         _currentStep = 4;
         _errorMessage = 'Gateway error: $e';
@@ -211,7 +254,11 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
     }
   }
 
-  Future<bool> _showStkPinSimulationDialog() async {
+  Future<bool> _showStkPinSimulationDialog({
+    String title = 'Safaricom M-Pesa PIN',
+    String subtitle = '',
+    bool isDaraja = true,
+  }) async {
     final pinCtrl = TextEditingController();
     bool confirmed = false;
 
@@ -225,19 +272,29 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _selectedMethod == 'daraja_mpesa' ? Colors.green.shade50 : Colors.blue.shade50,
+                color: isDaraja ? Colors.green.shade50 : Colors.blue.shade50,
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.phone_android,
-                color: _selectedMethod == 'daraja_mpesa' ? Colors.green.shade700 : Colors.blue.shade700,
+                isDaraja ? Icons.phone_android : Icons.account_balance_wallet,
+                color: isDaraja ? Colors.green.shade700 : Colors.blue.shade700,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                _selectedMethod == 'daraja_mpesa' ? 'Safaricom M-Pesa PIN' : 'Telebirr PIN Prompt',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  if (subtitle.isNotEmpty)
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                    ),
+                ],
               ),
             ),
           ],
@@ -262,11 +319,11 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
               obscureText: true,
               maxLength: 4,
               autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Enter 4-Digit M-Pesa PIN',
+              decoration: InputDecoration(
+                labelText: isDaraja ? 'Enter 4-Digit M-Pesa PIN' : 'Enter 4-Digit Telebirr PIN',
                 hintText: '••••',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock_outline),
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.lock_outline),
               ),
             ),
           ],
@@ -281,7 +338,7 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: _selectedMethod == 'daraja_mpesa' ? Colors.green.shade700 : Colors.blue.shade700,
+              backgroundColor: isDaraja ? Colors.green.shade700 : Colors.blue.shade700,
               foregroundColor: Colors.white,
             ),
             onPressed: () {
@@ -611,14 +668,37 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
   }
 
   Widget _buildStep3PaymentMethod() {
+    final isDarajaSandbox = ApiConfig.isDarajaSandbox;
+    final isTelebirrSandbox = ApiConfig.isTelebirrSandbox;
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Select Payment Gateway', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          const SizedBox(height: 6),
-          Text('Supported Ethiopian mobile wallets and cards:', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Select Payment Gateway', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.teal.shade800,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
+                onPressed: () async {
+                  await ApiGatewaySettingsModal.show(
+                    context,
+                    initialTabIndex: _selectedMethod == 'telebirr' ? 2 : 1,
+                  );
+                  if (mounted) setState(() {});
+                },
+                icon: const Icon(Icons.settings, size: 16),
+                label: const Text('API & Sandbox Config', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text('Supported Ethiopian mobile wallets and payment gateways:', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+          const SizedBox(height: 14),
 
           // 1. Safaricom Daraja M-Pesa
           _paymentMethodTile(
@@ -628,7 +708,7 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
             icon: Icons.flash_on,
             iconColor: Colors.green.shade700,
             bgColor: Colors.green.shade50,
-            badge: 'Recommended',
+            badge: isDarajaSandbox ? '🟢 Daraja Sandbox' : '🟢 Live',
           ),
 
           // 2. Telebirr
@@ -639,6 +719,7 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
             icon: Icons.account_balance_wallet,
             iconColor: Colors.blue.shade700,
             bgColor: Colors.blue.shade50,
+            badge: isTelebirrSandbox ? '📱 Telebirr Dev' : '📱 Live',
           ),
 
           // 3. CBE Birr
@@ -665,11 +746,36 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
 
           // Phone / details input for selected method
           if (_selectedMethod == 'daraja_mpesa' || _selectedMethod == 'telebirr' || _selectedMethod == 'cbe_birr') ...[
-            Text(
-              _selectedMethod == 'daraja_mpesa'
-                  ? 'Safaricom Phone Number for STK Push:'
-                  : 'Mobile Number for ${_selectedMethod == 'telebirr' ? 'Telebirr' : 'CBE Birr'}:',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _selectedMethod == 'daraja_mpesa'
+                      ? 'Safaricom Phone Number for STK Push:'
+                      : 'Mobile Number for ${_selectedMethod == 'telebirr' ? 'Telebirr' : 'CBE Birr'}:',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                if (_selectedMethod == 'daraja_mpesa')
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.green.shade300),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.flash_on, size: 12, color: Colors.green),
+                        const SizedBox(width: 4),
+                        Text(
+                          ApiConfig.isDarajaSandbox ? 'Sandbox Test Mode' : 'Live Gateway',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green.shade900),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 8),
             TextFormField(
@@ -682,6 +788,34 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
                 helperText: 'You will receive an instant push prompt to enter your PIN',
               ),
             ),
+            if (_selectedMethod == 'daraja_mpesa') ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Text('Test Numbers: ', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600)),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      ActionChip(
+                        label: const Text('0712345678', style: TextStyle(fontSize: 11)),
+                        backgroundColor: Colors.green.shade50,
+                        onPressed: () => setState(() => _paymentPhoneCtrl.text = '0712345678'),
+                      ),
+                      ActionChip(
+                        label: const Text('251700000000', style: TextStyle(fontSize: 11)),
+                        backgroundColor: Colors.green.shade50,
+                        onPressed: () => setState(() => _paymentPhoneCtrl.text = '251700000000'),
+                      ),
+                      ActionChip(
+                        label: const Text('254708374149', style: TextStyle(fontSize: 11)),
+                        backgroundColor: Colors.green.shade50,
+                        onPressed: () => setState(() => _paymentPhoneCtrl.text = '254708374149'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 20),
           ],
 
@@ -821,9 +955,64 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            _buildLiveDebugLogsViewer(),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildLiveDebugLogsViewer() {
+    return StreamBuilder<List<DarajaDebugLog>>(
+      stream: DarajaService.logStream,
+      initialData: DarajaService.debugLogs,
+      builder: (context, snapshot) {
+        final logs = snapshot.data ?? [];
+        if (logs.isEmpty) return const SizedBox.shrink();
+
+        return Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(maxHeight: 140),
+          margin: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E1E),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.bug_report, size: 14, color: Colors.greenAccent),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Safaricom Gateway Debug Trace',
+                    style: TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Expanded(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: logs.length,
+                  itemBuilder: (ctx, i) {
+                    final log = logs[logs.length - 1 - i];
+                    return Text(
+                      '[${log.formattedTime}] [${log.level}] ${log.title}: ${log.details}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 10, fontFamily: 'monospace'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -852,6 +1041,8 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
               ),
+              const SizedBox(height: 16),
+              _buildLiveDebugLogsViewer(),
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
@@ -919,6 +1110,7 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
                   const Text('Payment Receipt', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   const Divider(height: 20),
                   _summaryRow('Transaction ID', _transactionId),
+                  if (_createdPaymentId.isNotEmpty) _summaryRow('Payment ID', _createdPaymentId),
                   _summaryRow('Method', _selectedMethod == 'daraja_mpesa' ? 'Safaricom M-Pesa (Daraja)' : _selectedMethod.toUpperCase()),
                   _summaryRow('Amount Paid', '${_calculatedTotal.toStringAsFixed(2)} ETB'),
                   _summaryRow('Status', 'PAID / COMPLETED'),
@@ -927,6 +1119,8 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
               ),
             ),
           ),
+          const SizedBox(height: 14),
+          _buildLiveDebugLogsViewer(),
           const SizedBox(height: 24),
 
           ElevatedButton.icon(

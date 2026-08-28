@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../models/landmark.dart';
 import '../../models/recommendation_result.dart';
 import '../../pages/landmark_detail_page.dart';
 import '../../pages/recommendations_page.dart';
