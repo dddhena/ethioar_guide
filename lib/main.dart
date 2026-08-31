@@ -15,6 +15,7 @@ import 'pages/providers/my_reservations_page.dart';
 import 'pages/providers/register_provider_page.dart';
 import 'pages/providers/provider_dashboard_page.dart';
 import 'pages/providers/admin_providers_page.dart';
+import 'pages/admin/admin_dashboard.dart';
 import 'pages/recommendations_page.dart';
 // This app expects you to run `flutterfire configure` locally to generate
 // lib/firebase_options.dart with DefaultFirebaseOptions. After that the app
@@ -61,6 +62,7 @@ class _MyAppState extends State<MyApp> {
         '/provider-dashboard': (_) => const ProviderDashboardPage(),
         '/register-provider': (_) => const RegisterProviderPage(),
         '/admin-providers': (_) => const AdminProvidersPage(),
+        '/admin-dashboard': (_) => const AdminDashboard(),
         '/recommendations': (_) => const RecommendationsPage(),
       },
       home: FutureBuilder<FirebaseApp>(

@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../services/service_provider_service.dart';
 import '../widgets/api_gateway_settings_modal.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/qr_ticket_modal.dart';
 
 class TouristPaymentsPage extends StatelessWidget {
   const TouristPaymentsPage({super.key});
@@ -208,6 +209,36 @@ class TouristPaymentsPage extends StatelessWidget {
                           ),
                         ],
                       ),
+                      if (isCompleted || p.status.toLowerCase() == 'completed_scanned' || p.status.toLowerCase() == 'verified_scanned') ...[
+                        const Divider(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.teal.shade700,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              icon: const Icon(Icons.qr_code_rounded, size: 16),
+                              label: const Text('View Ticket', style: TextStyle(fontSize: 12)),
+                              onPressed: () {
+                                QrTicketModal.show(
+                                  context: context,
+                                  ticketId: p.bookingId.isNotEmpty ? p.bookingId : p.id,
+                                  title: p.title.isNotEmpty ? p.title : p.paymentType.replaceAll('_', ' ').toUpperCase(),
+                                  providerName: p.isEntranceFee ? 'Landmark Entry Gate' : 'Service Provider',
+                                  touristName: p.payerName.isNotEmpty ? p.payerName : 'Tourist User',
+                                  dateLabel: p.createdAt != null ? '${p.createdAt!.day}/${p.createdAt!.month}/${p.createdAt!.year}' : 'N/A',
+                                  guestsLabel: 'Verified Pass',
+                                  isUsed: p.status.toLowerCase() == 'completed_scanned' || p.status.toLowerCase() == 'verified_scanned',
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),

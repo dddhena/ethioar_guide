@@ -6,6 +6,7 @@ import '../../services/chat_service.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/snackbar_helper.dart';
 import '../chat/chat_page.dart';
+import '../../widgets/qr_ticket_modal.dart';
 
 class MyReservationsPage extends StatefulWidget {
   const MyReservationsPage({super.key});
@@ -267,6 +268,28 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
                           SnackbarHelper.show(context, 'Reservation cancelled.');
                         }
                       }
+                    },
+                  ),
+                if (r.status.toLowerCase() == 'confirmed' || r.status.toLowerCase() == 'completed')
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    ),
+                    icon: const Icon(Icons.qr_code_rounded, size: 16),
+                    label: const Text('View Ticket', style: TextStyle(fontSize: 12)),
+                    onPressed: () {
+                      QrTicketModal.show(
+                        context: context,
+                        ticketId: r.id,
+                        title: r.serviceName,
+                        providerName: r.providerName,
+                        touristName: r.touristName,
+                        dateLabel: r.formattedDates,
+                        guestsLabel: '${r.numberOfGuests} People',
+                        isUsed: r.status.toLowerCase() == 'completed',
+                      );
                     },
                   ),
               ],

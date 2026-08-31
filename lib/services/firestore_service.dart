@@ -82,6 +82,93 @@ class FirestoreService {
     }).toList();
   }
 
+  /// Get total count of users by role (admin statistics helper).
+  Future<Map<String, int>> getUserCountByRole() async {
+    final snapshot = await _db.collection('users').get();
+    final counts = <String, int>{
+      'total': snapshot.docs.length,
+      'tourist': 0,
+      'tour_guide': 0,
+      'provider': 0,
+      'admin': 0,
+    };
+    
+    for (final doc in snapshot.docs) {
+      final role = doc.data()['role'] as String? ?? 'tourist';
+      if (counts.containsKey(role)) {
+        counts[role] = (counts[role] ?? 0) + 1;
+      } else {
+        counts['tourist'] = (counts['tourist'] ?? 0) + 1;
+      }
+    }
+    
+    return counts;
+  }
+
+  /// Get total count of landmarks (admin statistics helper).
+  Future<int> getLandmarkCount() async {
+    final snapshot = await _db.collection('landmarks').get();
+    return snapshot.docs.length;
+  }
+
+  /// Get total count of service providers (admin statistics helper).
+  Future<int> getProviderCount() async {
+    final snapshot = await _db.collection('users').where('role', isEqualTo: 'provider').get();
+    return snapshot.docs.length;
+  }
+
+  /// Get total entrance payments amount (admin statistics helper).
+  Future<double> getTotalEntrancePayments() async {
+    final snapshot = await _db.collection('payments').get();
+    double total = 0.0;
+    for (final doc in snapshot.docs) {
+      final amount = doc.data()['amount'] as num? ?? 0;
+      final status = doc.data()['status'] as String? ?? '';
+      if (status == 'verified' || status == 'completed') {
+        total += amount.toDouble();
+      }
+    }
+    return total;
+  }
+
+  /// Get booking statistics by status (admin statistics helper).
+  Future<Map<String, int>> getBookingStatsByStatus() async {
+    final snapshot = await _db.collection('bookings').get();
+    final stats = <String, int>{
+      'total': snapshot.docs.length,
+      'pending': 0,
+      'confirmed': 0,
+      'completed': 0,
+      'cancelled': 0,
+    };
+    
+    for (final doc in snapshot.docs) {
+      final status = doc.data()['status'] as String? ?? 'pending';
+      if (stats.containsKey(status)) {
+        stats[status] = (stats[status] ?? 0) + 1;
+      } else {
+        stats['pending'] = (stats['pending'] ?? 0) + 1;
+      }
+    }
+    
+    return stats;
+  }
+
+  /// Get recent bookings for admin dashboard (admin statistics helper).
+  Future<List<Map<String, dynamic>>> getRecentBookings({int limit = 5}) async {
+    final snapshot = await _db
+        .collection('bookings')
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .get();
+    
+    return snapshot.docs.map((d) {
+      final m = d.data();
+      m['id'] = d.id;
+      return m;
+    }).toList();
+  }
+
   /// Promote or demote a user by setting their role.
   Future<void> setUserRole(String uid, String role) async {
     await _db.collection('users').doc(uid).update({'role': role});

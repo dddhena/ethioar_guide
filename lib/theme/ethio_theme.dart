@@ -2,27 +2,48 @@ import 'package:flutter/material.dart';
 
 /// Premium Ethiopian-inspired palette for the tourist journey experience.
 abstract final class EthioColors {
-  static const cream = Color(0xFFFAF8F5);
-  static const sand = Color(0xFFF3EDE4);
-  static const stone = Color(0xFF8B7355);
-  static const earth = Color(0xFF6B5344);
-  static const forest = Color(0xFF2D5A3D);
-  static const forestLight = Color(0xFF3D7A52);
-  static const terracotta = Color(0xFFC4784A);
-  static const slate = Color(0xFF3D6B8E);
-  static const charcoal = Color(0xFF2C2825);
-  static const muted = Color(0xFF7A736B);
-  static const divider = Color(0xFFE8E2D9);
-  static const cardShadow = Color(0x1A2C2825);
+  static const cream = Color(0xFFFCFAF7);
+  static const sand = Color(0xFFF5EFE6);
+  static const stone = Color(0xFFA38C75);
+  static const earth = Color(0xFF5E4534);
+  static const forest = Color(0xFF144D3B);
+  static const forestLight = Color(0xFF2E8A6E);
+  static const terracotta = Color(0xFFD4693F);
+  static const slate = Color(0xFF2E5F80);
+  static const charcoal = Color(0xFF1F1C1A);
+  static const muted = Color(0xFF827D75);
+  static const divider = Color(0xFFEAE5DC);
+  static const cardShadow = Color(0x0D1F1C1A);
+
+  // Mapped modern hues for dynamic content tags & screens
+  static const emergency = Color(0xFFC63E3D);
+  static const recommendation = Color(0xFF7B529B);
+  static const providerBlue = Color(0xFF2E5C8D);
+  static const guideGreen = Color(0xFF1C7A54);
+  static const adminGold = Color(0xFFC59B27);
 }
 
 ThemeData buildEthioTheme() {
-  const seed = EthioColors.forest;
-  final colorScheme = ColorScheme.fromSeed(
-    seedColor: seed,
+  final colorScheme = ColorScheme(
     brightness: Brightness.light,
+    primary: EthioColors.forest,
+    onPrimary: Colors.white,
+    primaryContainer: EthioColors.forest.withValues(alpha: 0.08),
+    onPrimaryContainer: EthioColors.forest,
+    secondary: EthioColors.terracotta,
+    onSecondary: Colors.white,
+    secondaryContainer: EthioColors.terracotta.withValues(alpha: 0.08),
+    onSecondaryContainer: EthioColors.terracotta,
+    tertiary: EthioColors.slate,
+    onTertiary: Colors.white,
+    tertiaryContainer: EthioColors.slate.withValues(alpha: 0.08),
+    onTertiaryContainer: EthioColors.slate,
     surface: EthioColors.cream,
     onSurface: EthioColors.charcoal,
+    error: EthioColors.emergency,
+    onError: Colors.white,
+    outline: EthioColors.divider,
+    shadow: EthioColors.cardShadow,
   );
 
   final baseTheme = ThemeData(
@@ -88,20 +109,38 @@ ThemeData buildEthioTheme() {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         elevation: 0,
+        backgroundColor: EthioColors.forest,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: EthioColors.muted.withValues(alpha: 0.24),
+        disabledForegroundColor: EthioColors.muted.withValues(alpha: 0.6),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         textStyle: const TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w600,
-          letterSpacing: 0.1,
-          inherit: false,
+          letterSpacing: 0.2,
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: EthioColors.forest,
+        side: const BorderSide(color: EthioColors.forest, width: 1.5),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        textStyle: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
         ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: EthioColors.muted,
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, inherit: false),
+        foregroundColor: EthioColors.forest,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
     ),
     cardTheme: CardThemeData(
@@ -113,20 +152,65 @@ ThemeData buildEthioTheme() {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: EthioColors.divider),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: EthioColors.divider, width: 1),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: EthioColors.divider),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: EthioColors.divider, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: EthioColors.forest, width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: EthioColors.forest, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: EthioColors.emergency, width: 1),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: EthioColors.emergency, width: 2),
       ),
       hintStyle: const TextStyle(color: EthioColors.muted, fontSize: 14),
+      labelStyle: const TextStyle(color: EthioColors.muted, fontSize: 14),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: EthioColors.sand,
+      disabledColor: EthioColors.sand.withValues(alpha: 0.5),
+      selectedColor: EthioColors.forest.withValues(alpha: 0.12),
+      secondarySelectedColor: EthioColors.forest.withValues(alpha: 0.12),
+      labelStyle: const TextStyle(color: EthioColors.charcoal, fontSize: 12, fontWeight: FontWeight.w500),
+      secondaryLabelStyle: const TextStyle(color: EthioColors.forest, fontSize: 12, fontWeight: FontWeight.bold),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+      side: BorderSide.none,
+      checkmarkColor: EthioColors.forest,
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      height: 64,
+      backgroundColor: Colors.white,
+      elevation: 8,
+      shadowColor: EthioColors.cardShadow,
+      indicatorColor: EthioColors.forest.withValues(alpha: 0.12),
+      indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      labelTextStyle: MaterialStateProperty.resolveWith((states) {
+        final isSelected = states.contains(MaterialState.selected);
+        return TextStyle(
+          fontSize: 11,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          color: isSelected ? EthioColors.forest : EthioColors.muted,
+        );
+      }),
+      iconTheme: MaterialStateProperty.resolveWith((states) {
+        final isSelected = states.contains(MaterialState.selected);
+        return IconThemeData(
+          size: 24,
+          color: isSelected ? EthioColors.forest : EthioColors.muted,
+        );
+      }),
     ),
   );
 }

@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/journey_preference_service.dart';
 import 'dashboard_page.dart';
+import 'admin/admin_dashboard.dart';
 import 'journey/ar_discovery_dashboard_page.dart';
 import 'journey/choose_journey_page.dart';
 import 'journey/guided_journey_dashboard_page.dart';
@@ -21,10 +22,17 @@ class TouristHomeRouter {
       profile = UserProfile(uid: uid, name: '', email: '', role: 'tourist');
     }
 
+    // Admin users go directly to admin dashboard
+    if (profile.isAdmin) {
+      return const AdminDashboard();
+    }
+
+    // Non-tourist users (providers, guides) go to general dashboard
     if (!profile.isTourist) {
       return const DashboardPage();
     }
 
+    // Tourists go to journey picker or their chosen dashboard
     return switch (JourneyPreferenceService.instance.mode) {
       JourneyMode.guided => const GuidedJourneyDashboardPage(),
       JourneyMode.ar => const ArDiscoveryDashboardPage(),
