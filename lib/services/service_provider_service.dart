@@ -4,6 +4,7 @@ import '../models/provider_service.dart';
 import '../models/reservation.dart';
 import '../models/payment.dart';
 import 'notification_service.dart';
+import 'chat_service.dart';
 
 class ServiceProviderService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -363,6 +364,78 @@ class ServiceProviderService {
           .toList();
       list.sort((a, b) => (b.createdAt ?? DateTime.now()).compareTo(a.createdAt ?? DateTime.now()));
       return list;
+    });
+  }
+
+  // ==========================================
+  // DASHBOARD STATISTICS
+  // ==========================================
+
+  /// Get dashboard statistics for a provider (reservations count, earnings, messages count, rating)
+  Stream<Map<String, dynamic>> getProviderDashboardStatsStream(String providerIdOrUserId) {
+    if (providerIdOrUserId.isEmpty) return Stream.value({});
+
+    return _db.collection('reservations').snapshots().asyncMap((snapshot) async {
+      final Set<String> targetIds = {providerIdOrUserId};
+      try {
+        final provDocs = await _db
+            .collection('service_providers')
+            .where('userId', isEqualTo: providerIdOrUserId)
+            .get();
+        for (final doc in provDocs.docs) {
+          targetIds.add(doc.id);
+        }
+      } catch (_) {}
+
+      // Get provider profile for rating
+      double rating = 0.0;
+      int reviewCount = 0;
+      try {
+        final provDoc = await _db.collection('service_providers').doc(targetIds.first).get();
+        if (provDoc.exists && provDoc.data() != null) {
+          final provider = ServiceProvider.fromMap(provDoc.id, provDoc.data()!);
+          rating = provider.rating;
+          reviewCount = provider.reviewCount;
+        }
+      } catch (_) {}
+
+      // Count reservations
+      final reservations = snapshot.docs
+          .map((d) => Reservation.fromMap(d.id, d.data()))
+          .where((r) => targetIds.contains(r.providerId))
+          .toList();
+
+      final reservationsCount = reservations.length;
+      final confirmedReservations = reservations.where((r) => r.isConfirmed).length;
+
+      // Calculate earnings from payments
+      double totalEarnings = 0.0;
+      try {
+        final paymentsSnapshot = await _db.collection('payments').get();
+        final payments = paymentsSnapshot.docs
+            .map((d) => Payment.fromMap(d.id, d.data()))
+            .where((p) => targetIds.contains(p.providerId) && p.isVerified)
+            .toList();
+        totalEarnings = payments.fold(0.0, (sum, p) => sum + p.amount);
+      } catch (_) {}
+
+      // Get unread messages count
+      int unreadMessagesCount = 0;
+      try {
+        final chatService = ChatService();
+        final unreadStream = chatService.getTotalUnreadMessagesCountStream(providerIdOrUserId);
+        final unread = await unreadStream.first;
+        unreadMessagesCount = unread;
+      } catch (_) {}
+
+      return {
+        'reservationsCount': reservationsCount,
+        'confirmedReservations': confirmedReservations,
+        'totalEarnings': totalEarnings,
+        'unreadMessagesCount': unreadMessagesCount,
+        'rating': rating,
+        'reviewCount': reviewCount,
+      };
     });
   }
 
