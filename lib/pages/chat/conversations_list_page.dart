@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/ethio_theme.dart';
 import '../../models/chat.dart';
 import '../../services/auth_service.dart';
 import '../../services/chat_service.dart';
@@ -140,10 +141,10 @@ class _ConversationsListPageState extends State<ConversationsListPage> {
                           Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: Colors.teal.shade50,
+                              color: EthioColors.forest.withValues(alpha: 0.08),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.forum_outlined, size: 64, color: Colors.teal.shade700),
+                            child: const Icon(Icons.forum_outlined, size: 64, color: EthioColors.forest),
                           ),
                           const SizedBox(height: 18),
                           const Text('No Conversations Yet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
@@ -155,10 +156,6 @@ class _ConversationsListPageState extends State<ConversationsListPage> {
                           ),
                           const SizedBox(height: 20),
                           ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.teal.shade700,
-                              foregroundColor: Colors.white,
-                            ),
                             icon: const Icon(Icons.support_agent),
                             label: const Text('Chat with Admin Support'),
                             onPressed: _startAdminSupportChat,
@@ -185,19 +182,19 @@ class _ConversationsListPageState extends State<ConversationsListPage> {
 
                     switch (otherRole.toLowerCase()) {
                       case 'provider':
-                        roleColor = Colors.blue.shade700;
+                        roleColor = EthioColors.providerBlue;
                         roleIcon = '🏢';
                         break;
                       case 'tour_guide':
-                        roleColor = Colors.green.shade700;
+                        roleColor = EthioColors.guideGreen;
                         roleIcon = '🗺️';
                         break;
                       case 'admin':
-                        roleColor = Colors.amber.shade800;
+                        roleColor = EthioColors.adminGold;
                         roleIcon = '👑';
                         break;
                       default:
-                        roleColor = Colors.teal.shade700;
+                        roleColor = EthioColors.forest;
                         roleIcon = '🧭';
                     }
 
@@ -291,8 +288,6 @@ class _ConversationsListPageState extends State<ConversationsListPage> {
       child: FilterChip(
         label: Text(label, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
         selected: isSelected,
-        selectedColor: Colors.teal.shade100,
-        checkmarkColor: Colors.teal.shade800,
         onSelected: (_) => setState(() => _filterRole = roleKey),
       ),
     );

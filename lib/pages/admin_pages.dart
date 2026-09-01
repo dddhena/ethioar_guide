@@ -366,6 +366,13 @@ class _AdminPageState extends State<AdminPage> {
     await _loadUsers();
   }
 
+  String _normalizeRole(String? role) {
+    if (role == null) return 'tourist';
+    final validRoles = ['tourist', 'tour_guide', 'provider', 'admin'];
+    if (validRoles.contains(role)) return role;
+    return 'tourist'; // Default to tourist if role is invalid
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
@@ -376,7 +383,7 @@ class _AdminPageState extends State<AdminPage> {
               itemCount: _users.length,
               itemBuilder: (context, i) {
                 final u = _users[i];
-                final currentRole = (u['role'] as String?) ?? 'tourist';
+                final currentRole = _normalizeRole(u['role'] as String?);
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 4),
                   child: ListTile(

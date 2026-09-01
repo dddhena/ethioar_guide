@@ -273,6 +273,17 @@ class ServiceProviderService {
     } catch (_) {}
   }
 
+  /// Fetch a single reservation by ID
+  Future<Reservation?> getReservationById(String reservationId) async {
+    try {
+      final doc = await _db.collection('reservations').doc(reservationId).get();
+      if (doc.exists && doc.data() != null) {
+        return Reservation.fromMap(doc.id, doc.data()!);
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// Stream of reservations for a specific provider business or provider user account.
   Stream<List<Reservation>> getProviderReservationsStream(String providerIdOrUserId) {
     if (providerIdOrUserId.isEmpty) return Stream.value([]);

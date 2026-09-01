@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/ethio_theme.dart';
 import '../models/user_profile.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
@@ -22,6 +23,7 @@ import 'chat/conversations_list_page.dart';
 import 'emergency/emergency_sos_dialog.dart';
 import 'admin/admin_emergency_dashboard.dart';
 import 'admin/admin_payment_verification_page.dart';
+import 'admin/admin_dashboard.dart';
 import 'guides/guide_dashboard_page.dart';
 import 'guides/guides_list_page.dart';
 import 'guides/my_guide_bookings_page.dart';
@@ -92,10 +94,10 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Color get _roleBadgeColor {
-    if (_profile.isAdmin)     return Colors.amber.shade800;
-    if (_profile.isProvider)  return Colors.blue.shade700;
-    if (_profile.isTourGuide) return Colors.green.shade700;
-    return Colors.teal.shade700;
+    if (_profile.isAdmin)     return EthioColors.adminGold;
+    if (_profile.isProvider)  return EthioColors.providerBlue;
+    if (_profile.isTourGuide) return EthioColors.guideGreen;
+    return EthioColors.forest;
   }
 
   // ── Reusable button builders ───────────────────────────────────────────────
@@ -105,7 +107,7 @@ class _DashboardPageState extends State<DashboardPage> {
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: color ?? Colors.teal.shade900,
+                color: color ?? EthioColors.forest,
               ),
         ),
       );
@@ -121,9 +123,9 @@ class _DashboardPageState extends State<DashboardPage> {
         child: ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
-            backgroundColor: color ?? Colors.teal.shade700,
+            backgroundColor: color ?? EthioColors.forest,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
           icon: Icon(icon),
           label: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -141,9 +143,9 @@ class _DashboardPageState extends State<DashboardPage> {
         child: OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
-            foregroundColor: Colors.teal.shade800,
-            side: BorderSide(color: Colors.teal.shade400),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            foregroundColor: EthioColors.forest,
+            side: const BorderSide(color: EthioColors.forest, width: 1.5),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
           icon: Icon(icon),
           label: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -161,9 +163,9 @@ class _DashboardPageState extends State<DashboardPage> {
           child: ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              backgroundColor: Colors.red.shade700,
+              backgroundColor: EthioColors.emergency,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
             icon: const Icon(Icons.emergency, size: 22),
             label: const Text('🚨 Emergency SOS Alert (1-Tap Help)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -175,7 +177,7 @@ class _DashboardPageState extends State<DashboardPage> {
         _primaryBtn(
           icon: Icons.auto_awesome,
           label: '✨ Recommended for You',
-          color: Colors.purple.shade700,
+          color: EthioColors.recommendation,
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const RecommendationsPage())),
         ),
@@ -190,21 +192,21 @@ class _DashboardPageState extends State<DashboardPage> {
         _primaryBtn(
           icon: Icons.near_me,
           label: '📍 Nearby Landmarks',
-          color: Colors.teal.shade800,
+          color: EthioColors.forestLight,
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const NearbyLandmarksPage())),
         ),
         _primaryBtn(
           icon: Icons.hotel,
           label: '🏨 Hotels, Dining & Transport',
-          color: Colors.blue.shade800,
+          color: EthioColors.providerBlue,
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const ServiceProvidersListPage())),
         ),
         _primaryBtn(
           icon: Icons.hiking,
           label: '🗺️ Find a Tour Guide',
-          color: Colors.green.shade800,
+          color: EthioColors.guideGreen,
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const GuidesListPage())),
         ),
@@ -246,14 +248,14 @@ class _DashboardPageState extends State<DashboardPage> {
         _primaryBtn(
           icon: Icons.dashboard,
           label: '🗺️ Tour Guide Dashboard',
-          color: Colors.green.shade800,
+          color: EthioColors.guideGreen,
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const GuideDashboardPage())),
         ),
         _primaryBtn(
           icon: Icons.chat,
           label: '💬 Messages',
-          color: Colors.teal.shade800,
+          color: EthioColors.forest,
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const ConversationsListPage())),
         ),
@@ -266,7 +268,7 @@ class _DashboardPageState extends State<DashboardPage> {
         _primaryBtn(
           icon: Icons.near_me,
           label: '📍 Nearby Landmarks',
-          color: Colors.teal.shade800,
+          color: EthioColors.forestLight,
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const NearbyLandmarksPage())),
         ),
@@ -284,130 +286,92 @@ class _DashboardPageState extends State<DashboardPage> {
         _primaryBtn(
           icon: Icons.store_mall_directory,
           label: '🏢 My Business Dashboard',
-          color: Colors.blue.shade800,
+          color: EthioColors.providerBlue,
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => ProviderDashboardPage())),
         ),
         _primaryBtn(
           icon: Icons.chat,
           label: '💬 Messages & Inquiries',
-          color: Colors.indigo.shade700,
+          color: EthioColors.slate,
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const ConversationsListPage())),
         ),
         _primaryBtn(
           icon: Icons.inbox,
           label: '📥 Reservations',
-          color: Colors.teal.shade700,
+          color: EthioColors.forestLight,
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const ProviderReservationsPage())),
         ),
         _primaryBtn(
           icon: Icons.attach_money,
           label: '💰 Payments',
-          color: Colors.green.shade700,
+          color: EthioColors.guideGreen,
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const ProviderPaymentsPage())),
         ),
         _primaryBtn(
           icon: Icons.notifications,
           label: '🔔 Notifications',
-          color: Colors.orange.shade700,
+          color: EthioColors.terracotta,
           onPressed: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const ProviderNotificationsPage())),
         ),
       ];
 
-  /// 👑 Admin: user management, verify providers, emergency SOS monitor, add landmarks
+  /// 👑 Admin: note - admins now navigate directly to AdminDashboard after login
   List<Widget> get _adminSection => [
-        _sectionHeader('Emergency & Security Command', color: Colors.red.shade900),
+        _sectionHeader('Administration', color: EthioColors.adminGold),
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              backgroundColor: Colors.red.shade800,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: EthioColors.adminGold.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: EthioColors.adminGold.withOpacity(0.3)),
             ),
-            icon: const Icon(Icons.warning_amber),
-            label: const Text('🚨 Live Emergency SOS Monitor',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            onPressed: () =>
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminEmergencyDashboard())),
-          ),
-        ),
-
-        _sectionHeader('Administration', color: Colors.amber.shade900),
-        _primaryBtn(
-          icon: Icons.support_agent,
-          label: '💬 Support Desk Messages',
-          color: Colors.amber.shade900,
-          onPressed: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const ConversationsListPage())),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              backgroundColor: Colors.amber.shade800,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, color: EthioColors.adminGold),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Admin Access',
+                      style: TextStyle(
+                        color: EthioColors.adminGold,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'You are logged in as an admin. Your main admin dashboard is accessible directly after login.',
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: EthioColors.adminGold,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(36),
+                  ),
+                  icon: const Icon(Icons.dashboard, size: 16),
+                  label: const Text('Go to Admin Dashboard', style: TextStyle(fontSize: 12)),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AdminDashboard()),
+                  ),
+                ),
+              ],
             ),
-            icon: const Icon(Icons.admin_panel_settings),
-            label: const Text('Manage Users & Roles',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            onPressed: () =>
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminPage())),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              backgroundColor: Colors.amber.shade900,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            icon: const Icon(Icons.verified),
-            label: const Text('Verify Service Providers',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            onPressed: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => AdminProvidersPage())),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              backgroundColor: Colors.teal.shade800,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            icon: const Icon(Icons.confirmation_number),
-            label: const Text('💳 Verify Entrance Payments',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            onPressed: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const AdminPaymentVerificationPage())),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              backgroundColor: Colors.teal.shade800,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            icon: const Icon(Icons.location_on),
-            label: const Text('Add / Manage Landmarks',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            onPressed: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const LandmarksPage())),
           ),
         ),
       ];
@@ -513,7 +477,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                       'Manage Profile →',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.teal.shade700,
+                                        color: EthioColors.forest,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),

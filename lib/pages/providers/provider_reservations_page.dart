@@ -8,6 +8,7 @@ import '../../models/service_provider.dart';
 import '../../services/chat_service.dart';
 import '../chat/chat_page.dart';
 import 'register_provider_page.dart';
+import 'provider_qr_scanner_page.dart';
 
 class ProviderReservationsPage extends StatefulWidget {
   const ProviderReservationsPage({super.key});
@@ -106,6 +107,19 @@ class _ProviderReservationsPageState extends State<ProviderReservationsPage> {
 
     return AppScaffold(
       title: 'Incoming Reservations',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.qr_code_scanner_rounded),
+          tooltip: 'Scan QR Ticket',
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ProviderQRScannerPage(providerId: queryTarget),
+              ),
+            );
+          },
+        ),
+      ],
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
