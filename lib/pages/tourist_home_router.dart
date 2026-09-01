@@ -5,6 +5,7 @@ import '../services/firestore_service.dart';
 import '../services/journey_preference_service.dart';
 import 'dashboard_page.dart';
 import 'admin/admin_dashboard.dart';
+import 'providers/provider_dashboard_page.dart';
 import 'journey/ar_discovery_dashboard_page.dart';
 import 'journey/choose_journey_page.dart';
 import 'journey/guided_journey_dashboard_page.dart';
@@ -27,7 +28,12 @@ class TouristHomeRouter {
       return const AdminDashboard();
     }
 
-    // Non-tourist users (providers, guides) go to general dashboard
+    // Service providers go to the new provider dashboard
+    if (profile.isProvider) {
+      return const ProviderDashboardPage();
+    }
+
+    // Non-tourist users (guides) go to general dashboard
     if (!profile.isTourist) {
       return const DashboardPage();
     }

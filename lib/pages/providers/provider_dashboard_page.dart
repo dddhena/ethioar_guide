@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../models/service_provider.dart';
-import '../../models/provider_service.dart';
-import '../../models/reservation.dart';
 import '../../services/auth_service.dart';
 import '../../services/service_provider_service.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/snackbar_helper.dart';
 import '../../widgets/notification_bell_button.dart';
 import 'register_provider_page.dart';
+import 'provider_reservations_page.dart';
+import 'provider_payments_page.dart';
+import 'provider_notifications_page.dart';
+import 'provider_edit_profile_page.dart';
+import '../chat/conversations_list_page.dart';
 
 class ProviderDashboardPage extends StatefulWidget {
   const ProviderDashboardPage({super.key});
@@ -16,25 +19,25 @@ class ProviderDashboardPage extends StatefulWidget {
   State<ProviderDashboardPage> createState() => _ProviderDashboardPageState();
 }
 
-class _ProviderDashboardPageState extends State<ProviderDashboardPage> with SingleTickerProviderStateMixin {
+class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
   final AuthService _auth = AuthService();
   final ServiceProviderService _service = ServiceProviderService();
 
-  late TabController _tabController;
   ServiceProvider? _provider;
   bool _loading = true;
+  Map<String, dynamic> _dashboardStats = {
+    'reservationsCount': 0,
+    'confirmedReservations': 0,
+    'totalEarnings': 0.0,
+    'unreadMessagesCount': 0,
+    'rating': 0.0,
+    'reviewCount': 0,
+  };
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _loadProviderProfile();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadProviderProfile() async {
@@ -46,119 +49,27 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> with Sing
           _provider = p;
           _loading = false;
         });
+        // Load dashboard stats
+        if (p != null) {
+          _service.getProviderDashboardStatsStream(p.id).listen((stats) {
+            if (mounted) {
+              setState(() {
+                _dashboardStats = stats;
+              });
+            }
+          });
+        }
       }
     } else {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  void _showAddServiceDialog([ProviderService? existing]) {
-    if (_provider == null) return;
-    final nameCtrl = TextEditingController(text: existing?.name ?? '');
-    final descCtrl = TextEditingController(text: existing?.description ?? '');
-    final priceCtrl = TextEditingController(text: existing != null ? existing.price.toStringAsFixed(0) : '1500');
-    final capacityCtrl = TextEditingController(text: existing != null ? existing.capacity.toString() : '2');
-    String type = existing?.serviceType ?? (_provider!.businessType == 'hotel' ? 'room' : _provider!.businessType == 'restaurant' ? 'dining' : 'vehicle');
-    bool isAvailable = existing?.isAvailable ?? true;
-    bool saving = false;
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            return AlertDialog(
-              title: Text(existing != null ? 'Edit Service' : 'Add New Service / Option'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: nameCtrl,
-                      decoration: const InputDecoration(labelText: 'Service Name (e.g. Deluxe Room, VIP Table, Shuttle)'),
-                    ),
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      controller: descCtrl,
-                      maxLines: 2,
-                      decoration: const InputDecoration(labelText: 'Description & Features'),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: priceCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Price (ETB)', prefixText: 'ETB '),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextFormField(
-                            controller: capacityCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Capacity (Guests/Seats)'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Available for booking'),
-                      value: isAvailable,
-                      onChanged: (v) => setDialogState(() => isAvailable = v),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
-                ElevatedButton(
-                  onPressed: saving
-                      ? null
-                      : () async {
-                          final name = nameCtrl.text.trim();
-                          if (name.isEmpty) return;
-                          setDialogState(() => saving = true);
-                          try {
-                            final item = ProviderService(
-                              id: existing?.id ?? '',
-                              providerId: _provider!.id,
-                              name: name,
-                              serviceType: type,
-                              description: descCtrl.text.trim(),
-                              price: double.tryParse(priceCtrl.text) ?? 0.0,
-                              capacity: int.tryParse(capacityCtrl.text) ?? 1,
-                              isAvailable: isAvailable,
-                            );
-
-                            if (existing != null) {
-                              await _service.updateService(item);
-                            } else {
-                              await _service.addService(item);
-                            }
-
-                            if (ctx.mounted) Navigator.of(ctx).pop();
-                            if (context.mounted) {
-                              SnackbarHelper.show(context, existing != null ? 'Service updated' : 'Service added');
-                            }
-                          } catch (e) {
-                            if (context.mounted) SnackbarHelper.show(context, 'Error saving service: $e');
-                          } finally {
-                            if (ctx.mounted) setDialogState(() => saving = false);
-                          }
-                        },
-                  child: Text(saving ? 'Saving...' : (existing != null ? 'Update' : 'Add Service')),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+  void _refreshProviderProfile() {
+    _loadProviderProfile();
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -210,270 +121,379 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> with Sing
 
     return AppScaffold(
       title: 'Provider Portal',
-      actions: const [NotificationBellButton()],
-      body: Column(
-        children: [
-          // Business Summary Header Card
-          Card(
-            elevation: 3,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: Colors.teal.shade50,
-                    child: Text(_provider!.typeIcon, style: const TextStyle(fontSize: 26)),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _provider!.businessName,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                        const SizedBox(height: 2),
-                        Text('${_provider!.typeDisplayName} • ${_provider!.city}', style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.green.shade300),
-                          ),
-                          child: const Text('Verified & Active', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Tab Bar
-          TabBar(
-            controller: _tabController,
-            labelColor: Colors.teal.shade800,
-            indicatorColor: Colors.teal.shade700,
-            tabs: const [
-              Tab(icon: Icon(Icons.list_alt), text: 'Services / Catalog'),
-              Tab(icon: Icon(Icons.inbox), text: 'Reservations Manager'),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.logout),
+          tooltip: 'Logout',
+          onPressed: () async {
+            await _auth.signOut();
+            if (mounted) {
+              Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+            }
+          },
+        ),
+        const NotificationBellButton(),
+      ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Greeting Section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildServicesTab(),
-                _buildReservationsTab(),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome back!',
+                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                    ),
+                    Text(
+                      _provider!.businessName,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: Colors.teal.shade100,
+                  child: Text(_provider!.typeIcon, style: const TextStyle(fontSize: 28)),
+                ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+            
+            // Business Summary Header Card
+            Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.business, color: Colors.teal.shade700, size: 28),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _provider!.businessName,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          const SizedBox(height: 2),
+                          Text('${_provider!.typeDisplayName} • ${_provider!.city}', style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade50,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: Colors.green.shade300),
+                                ),
+                                child: const Text('Verified & Active', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green)),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: Colors.blue.shade300),
+                                ),
+                                child: Text('${_provider!.rating} ★', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Quick Overview Section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Quick Overview',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.teal.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.refresh, size: 16, color: Colors.teal.shade700),
+                      const SizedBox(width: 4),
+                      Text('Today', style: TextStyle(fontSize: 12, color: Colors.teal.shade700, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            
+            // Overview Cards
+            Row(
+              children: [
+                Expanded(
+                  child: _buildOverviewCard(
+                    icon: Icons.book_online,
+                    title: 'Reservations',
+                    value: _dashboardStats['reservationsCount'].toString(),
+                    subtitle: '${_dashboardStats['confirmedReservations']} confirmed',
+                    color: const Color(0xFF6366F1),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildOverviewCard(
+                    icon: Icons.payments,
+                    title: 'Earnings',
+                    value: '${_dashboardStats['totalEarnings'].toStringAsFixed(0)} ETB',
+                    subtitle: 'Total revenue',
+                    color: const Color(0xFF10B981),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildOverviewCard(
+                    icon: Icons.chat_bubble,
+                    title: 'Messages',
+                    value: _dashboardStats['unreadMessagesCount'].toString(),
+                    subtitle: 'Unread messages',
+                    color: const Color(0xFFF59E0B),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildOverviewCard(
+                    icon: Icons.star_rate,
+                    title: 'Rating',
+                    value: _dashboardStats['rating'].toStringAsFixed(1),
+                    subtitle: '${_dashboardStats['reviewCount']} reviews',
+                    color: const Color(0xFFEC4899),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            
+            // Portal Access Section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Portal Access',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                TextButton(
+                  onPressed: () {},
+                  child: Text('View All', style: TextStyle(fontSize: 12, color: Colors.teal.shade700)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            
+            // Portal Access Cards
+            _buildPortalAccessCard(
+              icon: Icons.edit,
+              title: 'Edit Profile',
+              subtitle: 'Update your business information and settings',
+              onTap: () async {
+                final result = await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => ProviderEditProfilePage(provider: _provider!)),
+                );
+                if (result != null && result is ServiceProvider) {
+                  _refreshProviderProfile();
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+            _buildPortalAccessCard(
+              icon: Icons.analytics,
+              title: 'My Business Dashboard',
+              subtitle: 'Manage your business profile and services',
+              onTap: () {
+                SnackbarHelper.show(context, 'You are already on the dashboard');
+              },
+            ),
+            const SizedBox(height: 8),
+            _buildPortalAccessCard(
+              icon: Icons.forum,
+              title: 'Messages & Inquiries',
+              subtitle: 'Chat with tourists and respond to inquiries',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ConversationsListPage()),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            _buildPortalAccessCard(
+              icon: Icons.calendar_month,
+              title: 'Reservations',
+              subtitle: 'View and manage booking requests',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ProviderReservationsPage()),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            _buildPortalAccessCard(
+              icon: Icons.account_balance_wallet,
+              title: 'Payments',
+              subtitle: 'Track earnings and payment history',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ProviderPaymentsPage()),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            _buildPortalAccessCard(
+              icon: Icons.notifications_active,
+              title: 'Notifications',
+              subtitle: 'View system notifications and alerts',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ProviderNotificationsPage()),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildServicesTab() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 6.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildOverviewCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required String subtitle,
+    required Color color,
+  }) {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withOpacity(0.1),
+              color.withOpacity(0.05),
+            ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Manage Options & Pricing', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal.shade700,
-                  foregroundColor: Colors.white,
-                  visualDensity: VisualDensity.compact,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Add Service Option'),
-                onPressed: () => _showAddServiceDialog(),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
               ),
             ],
           ),
         ),
-        Expanded(
-          child: StreamBuilder<List<ProviderService>>(
-            stream: _service.getServicesStream(_provider!.id),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final list = snapshot.data ?? [];
-              if (list.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('No service options listed yet.'),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: () => _showAddServiceDialog(),
-                        child: const Text('Add First Service'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              return ListView.builder(
-                itemCount: list.length,
-                itemBuilder: (context, i) {
-                  final item = list[i];
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    child: ListTile(
-                      title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('${item.formattedPrice} • ${item.capacityLabel}'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, size: 18),
-                            onPressed: () => _showAddServiceDialog(item),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                            onPressed: () async {
-                              await _service.deleteService(item.id);
-                              if (context.mounted) SnackbarHelper.show(context, 'Service deleted');
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildReservationsTab() {
-    return StreamBuilder<List<Reservation>>(
-      stream: _service.getProviderReservationsStream(_provider!.id),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final list = snapshot.data ?? [];
-
-        if (list.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.inbox, size: 48, color: Colors.grey.shade400),
-                const SizedBox(height: 8),
-                const Text('No reservations received yet', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                const Text('Tourist booking requests will appear here in real time.', style: TextStyle(color: Colors.grey, fontSize: 12)),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          itemCount: list.length,
-          itemBuilder: (context, i) {
-            final r = list[i];
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 6),
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(14.0),
+  Widget _buildPortalAccessCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: Colors.teal.shade700, size: 22),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          r.serviceName,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: r.isConfirmed
-                                ? Colors.green.shade50
-                                : r.isDeclined
-                                    ? Colors.red.shade50
-                                    : Colors.amber.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            r.status.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: r.isConfirmed
-                                  ? Colors.green.shade800
-                                  : r.isDeclined
-                                      ? Colors.red.shade800
-                                      : Colors.amber.shade900,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text('Tourist: ${r.touristName} (${r.touristPhone.isNotEmpty ? r.touristPhone : r.touristEmail})', style: const TextStyle(fontSize: 13)),
-                    const SizedBox(height: 4),
-                    Text('Dates: ${r.formattedDates} • ${r.numberOfGuests} Guests • Total: ${r.formattedTotal}', style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
-                    if (r.specialRequests.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text('Note: "${r.specialRequests}"', style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic)),
-                    ],
-                    if (r.isPending) ...[
-                      const Divider(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          OutlinedButton(
-                            style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                            onPressed: () async {
-                              await _service.updateReservationStatus(r.id, 'declined');
-                              if (context.mounted) SnackbarHelper.show(context, 'Reservation declined');
-                            },
-                            child: const Text('Decline'),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.teal.shade700,
-                              foregroundColor: Colors.white,
-                            ),
-                            onPressed: () async {
-                              await _service.updateReservationStatus(r.id, 'confirmed');
-                              if (context.mounted) SnackbarHelper.show(context, 'Reservation confirmed! Tourist notified.');
-                            },
-                            child: const Text('Confirm Booking'),
-                          ),
-                        ],
-                      ),
-                    ],
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    const SizedBox(height: 2),
+                    Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                   ],
                 ),
               ),
-            );
-          },
-        );
-      },
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
