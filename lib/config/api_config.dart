@@ -9,6 +9,10 @@ class ApiConfig {
   static String? _customGeminiKey;
   static set customApiKey(String? key) => _customGeminiKey = key;
 
+  static String? _selectedGeminiModel;
+  static String get selectedGeminiModel => _selectedGeminiModel ?? 'gemini-3.6-flash';
+  static set selectedGeminiModel(String? model) => _selectedGeminiModel = model;
+
   static String get geminiApiKey {
     if (_customGeminiKey != null && _customGeminiKey!.trim().isNotEmpty) {
       return _customGeminiKey!.trim();
@@ -24,8 +28,12 @@ class ApiConfig {
       geminiApiKey.isNotEmpty && geminiApiKey != 'YOUR_GEMINI_API_KEY';
 
   // ===========================================================================
-  // 2. SAFARICOM DARAJA (M-PESA) CONFIGURATION
+  // 2. SAFARICOM ETHIOPIA M-PESA CONFIGURATION (developer.safaricom.et)
   // ===========================================================================
+  static const String safaricomEtPortalUrl = 'https://developer.safaricom.et/apps';
+  static const String safaricomEtSandboxBaseUrl = 'https://apisandbox.safaricom.et';
+  static const String safaricomEtLiveBaseUrl = 'https://api.safaricom.et';
+
   static String? _darajaConsumerKey;
   static String? _darajaConsumerSecret;
   static String? _darajaPasskey;
@@ -33,22 +41,46 @@ class ApiConfig {
   static bool _darajaSandbox = true;
   static String? _darajaCallbackUrl;
 
-  static String get darajaConsumerKey =>
-      _darajaConsumerKey?.trim() ??
-      const String.fromEnvironment('DARAJA_CONSUMER_KEY', defaultValue: '');
+  static String get safaricomPortalUrl => safaricomEtPortalUrl;
 
-  static String get darajaConsumerSecret =>
-      _darajaConsumerSecret?.trim() ??
-      const String.fromEnvironment('DARAJA_CONSUMER_SECRET', defaultValue: '');
+  static String get safaricomBaseUrl =>
+      _darajaSandbox ? safaricomEtSandboxBaseUrl : safaricomEtLiveBaseUrl;
 
-  static String get darajaPasskey =>
-      _darajaPasskey?.trim() ??
-      const String.fromEnvironment('DARAJA_PASSKEY', defaultValue: '');
+  static String get darajaConsumerKey {
+    if (_darajaConsumerKey != null && _darajaConsumerKey!.trim().isNotEmpty) {
+      return _darajaConsumerKey!.trim();
+    }
+    const etKey = String.fromEnvironment('SAFARICOM_CONSUMER_KEY', defaultValue: '');
+    if (etKey.isNotEmpty) return etKey;
+    return const String.fromEnvironment('DARAJA_CONSUMER_KEY', defaultValue: '');
+  }
 
-  static String get darajaShortCode =>
-      (_darajaShortCode != null && _darajaShortCode!.trim().isNotEmpty)
-          ? _darajaShortCode!.trim()
-          : const String.fromEnvironment('DARAJA_SHORTCODE', defaultValue: '174379'); // Daraja Sandbox shortcode
+  static String get darajaConsumerSecret {
+    if (_darajaConsumerSecret != null && _darajaConsumerSecret!.trim().isNotEmpty) {
+      return _darajaConsumerSecret!.trim();
+    }
+    const etSecret = String.fromEnvironment('SAFARICOM_CONSUMER_SECRET', defaultValue: '');
+    if (etSecret.isNotEmpty) return etSecret;
+    return const String.fromEnvironment('DARAJA_CONSUMER_SECRET', defaultValue: '');
+  }
+
+  static String get darajaPasskey {
+    if (_darajaPasskey != null && _darajaPasskey!.trim().isNotEmpty) {
+      return _darajaPasskey!.trim();
+    }
+    const etPasskey = String.fromEnvironment('SAFARICOM_PASSKEY', defaultValue: '');
+    if (etPasskey.isNotEmpty) return etPasskey;
+    return const String.fromEnvironment('DARAJA_PASSKEY', defaultValue: '');
+  }
+
+  static String get darajaShortCode {
+    if (_darajaShortCode != null && _darajaShortCode!.trim().isNotEmpty) {
+      return _darajaShortCode!.trim();
+    }
+    const etCode = String.fromEnvironment('SAFARICOM_SHORTCODE', defaultValue: '');
+    if (etCode.isNotEmpty) return etCode;
+    return const String.fromEnvironment('DARAJA_SHORTCODE', defaultValue: '174379');
+  }
 
   static bool get isDarajaSandbox => _darajaSandbox;
 

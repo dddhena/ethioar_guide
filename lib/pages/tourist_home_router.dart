@@ -5,7 +5,8 @@ import '../services/firestore_service.dart';
 import '../services/journey_preference_service.dart';
 import 'dashboard_page.dart';
 import 'admin/admin_dashboard.dart';
-import 'providers/provider_dashboard_page.dart';
+import 'providers/provider_navigation_wrapper.dart';
+import 'guides/guide_dashboard_page.dart';
 import 'journey/ar_discovery_dashboard_page.dart';
 import 'journey/choose_journey_page.dart';
 import 'journey/guided_journey_dashboard_page.dart';
@@ -28,12 +29,17 @@ class TouristHomeRouter {
       return const AdminDashboard();
     }
 
-    // Service providers go to the new provider dashboard
+    // Service providers go to the new provider navigation wrapper
     if (profile.isProvider) {
-      return const ProviderDashboardPage();
+      return const ProviderNavigationWrapper();
     }
 
-    // Non-tourist users (guides) go to general dashboard
+    // Tour guides go to the new guide dashboard
+    if (profile.isTourGuide) {
+      return const GuideDashboardPage();
+    }
+
+    // Non-tourist users go to general dashboard
     if (!profile.isTourist) {
       return const DashboardPage();
     }

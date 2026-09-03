@@ -1,39 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../config/api_config.dart';
-import '../services/daraja_service.dart';
-import '../services/telebirr_service.dart';
-import '../theme/ethio_theme.dart';
+import '../../config/api_config.dart';
+import '../../services/daraja_service.dart';
+import '../../services/gemini_service.dart';
+import '../../services/telebirr_service.dart';
+import '../../theme/ethio_theme.dart';
 
-class ApiGatewaySettingsModal extends StatefulWidget {
+class AdminSystemConfigPage extends StatefulWidget {
+  final bool isEmbedded;
   final int initialTabIndex;
 
-  const ApiGatewaySettingsModal({
+  const AdminSystemConfigPage({
     super.key,
+    this.isEmbedded = false,
     this.initialTabIndex = 0,
   });
 
-  static Future<void> show(BuildContext context, {int initialTabIndex = 0}) {
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => ApiGatewaySettingsModal(initialTabIndex: initialTabIndex),
+  static Future<void> open(BuildContext context, {int initialTabIndex = 0}) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AdminSystemConfigPage(
+          isEmbedded: false,
+          initialTabIndex: initialTabIndex,
+        ),
+      ),
     );
   }
 
   @override
-  State<ApiGatewaySettingsModal> createState() => _ApiGatewaySettingsModalState();
+  State<AdminSystemConfigPage> createState() => _AdminSystemConfigPageState();
 }
 
-class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
+class _AdminSystemConfigPageState extends State<AdminSystemConfigPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Gemini Controllers
+  // Gemini State
   late TextEditingController _geminiKeyCtrl;
+  String _selectedGeminiModel = ApiConfig.selectedGeminiModel;
+  List<String> _availableGeminiModels = [];
 
-  // Daraja Controllers
+  // Safaricom Ethiopia Controllers
   late TextEditingController _darajaConsumerKeyCtrl;
   late TextEditingController _darajaConsumerSecretCtrl;
   late TextEditingController _darajaPasskeyCtrl;
@@ -47,9 +54,15 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
   late TextEditingController _telebirrShortCodeCtrl;
   late bool _telebirrIsSandbox;
 
+  // Testing states
   bool _testingConnection = false;
   String? _testStatusMessage;
   bool _testSuccess = false;
+
+  // Safaricom Test STK Controllers
+  final TextEditingController _stkTestPhoneCtrl = TextEditingController(text: '0770000000');
+  final TextEditingController _stkTestAmountCtrl = TextEditingController(text: '10');
+  bool _testingStk = false;
 
   @override
   void initState() {
@@ -60,28 +73,27 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
       initialIndex: widget.initialTabIndex.clamp(0, 2),
     );
 
-    // Init Gemini
     _geminiKeyCtrl = TextEditingController(text: ApiConfig.geminiApiKey);
+    _selectedGeminiModel = ApiConfig.selectedGeminiModel;
 
-    // Init Daraja
+    GeminiService.listAvailableModels().then((models) {
+      if (mounted && models.isNotEmpty) {
+        setState(() => _availableGeminiModels = models);
+      }
+    });
+
     _darajaConsumerKeyCtrl = TextEditingController(text: ApiConfig.darajaConsumerKey);
     _darajaConsumerSecretCtrl = TextEditingController(text: ApiConfig.darajaConsumerSecret);
     _darajaPasskeyCtrl = TextEditingController(text: ApiConfig.darajaPasskey);
     _darajaShortCodeCtrl = TextEditingController(text: ApiConfig.darajaShortCode);
     _darajaIsSandbox = ApiConfig.isDarajaSandbox;
 
-    // Init Telebirr
     _telebirrAppIdCtrl = TextEditingController(text: ApiConfig.telebirrAppId);
     _telebirrAppKeyCtrl = TextEditingController(text: ApiConfig.telebirrAppKey);
     _telebirrPublicKeyCtrl = TextEditingController(text: ApiConfig.telebirrPublicKey);
     _telebirrShortCodeCtrl = TextEditingController(text: ApiConfig.telebirrShortCode);
     _telebirrIsSandbox = ApiConfig.isTelebirrSandbox;
   }
-
-  // Safaricom Ethiopia Test STK Controllers
-  final TextEditingController _stkTestPhoneCtrl = TextEditingController(text: '0770000000');
-  final TextEditingController _stkTestAmountCtrl = TextEditingController(text: '10');
-  bool _testingStk = false;
 
   @override
   void dispose() {
@@ -103,8 +115,9 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
   void _saveAllSettings() {
     // 1. Gemini
     ApiConfig.customApiKey = _geminiKeyCtrl.text.trim();
+    ApiConfig.selectedGeminiModel = _selectedGeminiModel;
 
-    // 2. Daraja
+    // 2. Safaricom Ethiopia
     ApiConfig.setDarajaConfig(
       consumerKey: _darajaConsumerKeyCtrl.text.trim(),
       consumerSecret: _darajaConsumerSecretCtrl.text.trim(),
@@ -124,13 +137,53 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('✅ Gateway & API settings updated successfully!'),
-        backgroundColor: EthioColors.forest,
-        duration: Duration(seconds: 2),
+        content: Text('✅ System configuration saved & applied successfully!'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 3),
       ),
     );
 
-    Navigator.pop(context);
+    if (!widget.isEmbedded) {
+      Navigator.pop(context);
+    }
+  }
+
+  Future<void> _testGeminiConnection() async {
+    final key = _geminiKeyCtrl.text.trim();
+    if (key.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a Gemini API key to test.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _testingConnection = true;
+      _testStatusMessage = 'Querying Google Generative AI API and discovering models...';
+      _testSuccess = false;
+    });
+
+    ApiConfig.customApiKey = key;
+    ApiConfig.selectedGeminiModel = _selectedGeminiModel;
+
+    final res = await GeminiService().testConnection(apiKey: key);
+    if (!mounted) return;
+
+    final models = (res['availableModels'] as List?)?.cast<String>() ?? [];
+
+    setState(() {
+      _testingConnection = false;
+      _testSuccess = res['success'] as bool? ?? false;
+      _testStatusMessage = _testSuccess
+          ? '${res['message']} (Response: "${res['reply']}")'
+          : '${res['message']}';
+      if (models.isNotEmpty) {
+        _availableGeminiModels = models;
+        if (res['model'] != null) {
+          _selectedGeminiModel = res['model'] as String;
+        }
+      }
+    });
   }
 
   Future<void> _testDarajaConnection() async {
@@ -140,7 +193,6 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
       _testSuccess = false;
     });
 
-    // Temporarily apply current inputs
     ApiConfig.setDarajaConfig(
       consumerKey: _darajaConsumerKeyCtrl.text.trim(),
       consumerSecret: _darajaConsumerSecretCtrl.text.trim(),
@@ -186,7 +238,6 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
       _testSuccess = false;
     });
 
-    // Apply configuration
     ApiConfig.setDarajaConfig(
       consumerKey: _darajaConsumerKeyCtrl.text.trim(),
       consumerSecret: _darajaConsumerSecretCtrl.text.trim(),
@@ -259,73 +310,70 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.88,
-      ),
-      margin: EdgeInsets.only(bottom: bottomInset),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Drag Handle
-          const SizedBox(height: 12),
-          Container(
-            width: 44,
-            height: 4,
-            decoration: BoxDecoration(
-              color: EthioColors.divider,
-              borderRadius: BorderRadius.circular(2),
-            ),
+    final content = Column(
+      children: [
+        // Header Section
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: EthioColors.forest.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.security, color: EthioColors.forest, size: 22),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: EthioColors.forest.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'API & Payment Gateways',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: EthioColors.charcoal),
+                child: const Icon(Icons.settings_suggest, color: EthioColors.forest, size: 24),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'System & Gateway Configuration',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: EthioColors.charcoal,
                       ),
-                      Text(
-                        'Safaricom M-Pesa & Telebirr • Safe for GitHub commits',
-                        style: TextStyle(fontSize: 12, color: EthioColors.muted),
-                      ),
-                    ],
-                  ),
+                    ),
+                    Text(
+                      'Admin Restricted • Configure Gemini AI & Payment Gateways (Safaricom M-Pesa & Telebirr)',
+                      style: TextStyle(fontSize: 12, color: EthioColors.muted),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: EthioColors.muted),
-                  onPressed: () => Navigator.pop(context),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: EthioColors.forest,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-              ],
-            ),
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Save Configuration', style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: _saveAllSettings,
+              ),
+            ],
           ),
+        ),
 
-          const SizedBox(height: 12),
-
-          // Tab Bar
-          TabBar(
+        // Tab Bar
+        Container(
+          color: Colors.white,
+          child: TabBar(
             controller: _tabController,
             indicatorColor: EthioColors.forest,
             indicatorWeight: 3,
@@ -339,94 +387,72 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
               ),
               Tab(
                 icon: Icon(Icons.payments, size: 18),
-                text: 'Safaricom M-Pesa (ET)',
+                text: 'Safaricom M-Pesa (ET) 🇪🇹',
               ),
               Tab(
                 icon: Icon(Icons.phone_android, size: 18),
-                text: 'Telebirr Dev',
+                text: 'Telebirr Dev 📱',
               ),
             ],
           ),
-          const Divider(height: 1, color: EthioColors.divider),
+        ),
+        const Divider(height: 1, color: EthioColors.divider),
 
-          // Tab Content
-          Flexible(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildGeminiTab(),
-                _buildDarajaTab(),
-                _buildTelebirrTab(),
-              ],
-            ),
-          ),
-
-          // Test Status Banner if present
-          if (_testStatusMessage != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: _testSuccess ? Colors.green.shade50 : Colors.amber.shade50,
-              child: Row(
-                children: [
-                  Icon(
-                    _testSuccess ? Icons.check_circle : Icons.info_outline,
-                    size: 16,
-                    color: _testSuccess ? Colors.green.shade800 : Colors.amber.shade900,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _testStatusMessage!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: _testSuccess ? Colors.green.shade900 : Colors.amber.shade900,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // Action Buttons Footer
+        // Test Status Banner if present
+        if (_testStatusMessage != null)
           Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: EthioColors.divider)),
-            ),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            color: _testSuccess ? Colors.green.shade50 : Colors.amber.shade50,
             child: Row(
               children: [
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: EthioColors.divider),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel', style: TextStyle(color: EthioColors.charcoal)),
-                  ),
+                Icon(
+                  _testSuccess ? Icons.check_circle : Icons.info_outline,
+                  size: 18,
+                  color: _testSuccess ? Colors.green.shade800 : Colors.amber.shade900,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
-                  flex: 2,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: EthioColors.forest,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  child: Text(
+                    _testStatusMessage!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _testSuccess ? Colors.green.shade900 : Colors.amber.shade900,
+                      fontWeight: FontWeight.w600,
                     ),
-                    onPressed: _saveAllSettings,
-                    child: const Text('Save & Apply Settings', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
             ),
           ),
-        ],
+
+        // Tab Views
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildGeminiTab(),
+              _buildDarajaTab(),
+              _buildTelebirrTab(),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (widget.isEmbedded) {
+      return content;
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        title: const Text('System Configuration', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF1B4D3E),
+        foregroundColor: Colors.white,
+        elevation: 0,
       ),
+      body: content,
     );
   }
 
@@ -437,7 +463,7 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
     final hasKey = _geminiKeyCtrl.text.trim().isNotEmpty;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -497,22 +523,100 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
             ),
             onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+
+          // Active Gemini Model Selector
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Active Gemini Model',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              if (_availableGeminiModels.isNotEmpty)
+                Text(
+                  '${_availableGeminiModels.length} models discovered',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          DropdownButtonFormField<String>(
+            initialValue: (_availableGeminiModels.contains(_selectedGeminiModel))
+                ? _selectedGeminiModel
+                : (_availableGeminiModels.isNotEmpty ? _availableGeminiModels.first : 'gemini-3.6-flash'),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.smart_toy_outlined, color: EthioColors.forest),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              isDense: true,
+            ),
+            items: (_availableGeminiModels.isNotEmpty
+                    ? _availableGeminiModels
+                    : ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3.8-flash', 'gemini-2.5-flash'])
+                .map((m) => DropdownMenuItem(
+                      value: m,
+                      child: Text(
+                        '$m ${m.contains('3.6') ? '⭐ (Recommended)' : ''}',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ))
+                .toList(),
+            onChanged: (val) {
+              if (val != null) {
+                setState(() => _selectedGeminiModel = val);
+              }
+            },
+          ),
+          const SizedBox(height: 14),
+
+          // Test Gemini Connection Button
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: EthioColors.forest,
+                side: const BorderSide(color: EthioColors.forest),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: _testingConnection ? null : _testGeminiConnection,
+              icon: _testingConnection
+                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.network_check, size: 16),
+              label: const Text(
+                'Test Gemini API & Fetch Live Models',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: EthioColors.sand.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: EthioColors.sand),
             ),
-            child: const Row(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline, size: 16, color: EthioColors.charcoal),
-                SizedBox(width: 8),
+                const Icon(Icons.auto_awesome, size: 18, color: EthioColors.terracotta),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    'Your API key is kept locally in memory and never checked into GitHub. Obtain a free key from Google AI Studio (aistudio.google.com).',
-                    style: TextStyle(fontSize: 12, color: EthioColors.charcoal),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Future-Proof Dynamic Model Discovery',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: EthioColors.charcoal),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'The system dynamically queries Google Generative AI for supported models. Any new models (such as Gemini 3.6, 3.7, 3.8, etc.) or future Gemini updates released by Google are automatically discovered, tested, and prioritized without requiring code changes.',
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade700, height: 1.4),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -528,13 +632,13 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
   // ===========================================================================
   Widget _buildDarajaTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Developer Portal Official Callout for Ethiopia
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -553,29 +657,29 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: Colors.green.shade700,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: const Text(
                         'ETHIOPIA 🇪🇹',
-                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     const Expanded(
                       child: Text(
                         'Safaricom Ethiopia Developer Portal',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1B5E20)),
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1B5E20)),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 const Text(
-                  'Ethiopian developers obtain credentials from Safaricom Ethiopia portal, not the Kenyan Daraja portal.',
-                  style: TextStyle(fontSize: 11, color: Colors.black87),
+                  'Ethiopian developers register apps on the official Safaricom Ethiopia developer portal to obtain credentials for Safaricom Ethiopia M-PESA:',
+                  style: TextStyle(fontSize: 12, color: Colors.black87),
                 ),
                 const SizedBox(height: 10),
                 InkWell(
@@ -590,7 +694,7 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
@@ -598,13 +702,13 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.link_rounded, size: 16, color: EthioColors.forest),
+                        const Icon(Icons.link_rounded, size: 18, color: EthioColors.forest),
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
                             'https://developer.safaricom.et/apps',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: EthioColors.forest,
                               decoration: TextDecoration.underline,
@@ -612,7 +716,7 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
                             color: Colors.green.shade100,
                             borderRadius: BorderRadius.circular(6),
@@ -620,9 +724,9 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.copy, size: 12, color: EthioColors.forest),
+                              Icon(Icons.copy, size: 13, color: EthioColors.forest),
                               SizedBox(width: 4),
-                              Text('Copy Link', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EthioColors.forest)),
+                              Text('Copy Link', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: EthioColors.forest)),
                             ],
                           ),
                         ),
@@ -630,17 +734,17 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     Text(
                       'Endpoints: ',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
                     ),
                     Text(
-                      _darajaIsSandbox ? 'apisandbox.safaricom.et' : 'api.safaricom.et',
+                      _darajaIsSandbox ? 'apisandbox.safaricom.et (Sandbox)' : 'api.safaricom.et (Live)',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontFamily: 'monospace',
                         color: _darajaIsSandbox ? Colors.orange.shade800 : Colors.green.shade800,
                         fontWeight: FontWeight.bold,
@@ -651,7 +755,7 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
           // Sandbox Mode Switch & Preset Button
           Row(
@@ -683,7 +787,7 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           // Consumer Key
           const Text('Consumer Key', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
@@ -736,7 +840,7 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 flex: 2,
                 child: Column(
@@ -759,7 +863,7 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
           // Test Connection Button
           Row(
@@ -782,11 +886,11 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
             ],
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
 
           // Live STK Push Test Box
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.green.shade50.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(14),
@@ -882,7 +986,7 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
           // Realtime Safaricom Debug Log Viewer
           Row(
@@ -938,7 +1042,7 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
                   shrinkWrap: true,
                   itemCount: logs.length,
                   itemBuilder: (ctx, i) {
-                    final log = logs[logs.length - 1 - i]; // Newest first
+                    final log = logs[logs.length - 1 - i];
                     Color levelColor = Colors.greenAccent;
                     if (log.level == 'ERROR') levelColor = Colors.redAccent;
                     if (log.level == 'REQUEST') levelColor = Colors.lightBlueAccent;
@@ -1000,7 +1104,7 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
   // ===========================================================================
   Widget _buildTelebirrTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1033,7 +1137,7 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           // App ID
           const Text('Telebirr App ID', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
@@ -1041,8 +1145,8 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
           TextField(
             controller: _telebirrAppIdCtrl,
             decoration: InputDecoration(
-              hintText: 'e.g. 20240101000000000',
-              prefixIcon: const Icon(Icons.badge, size: 18),
+              hintText: 'Enter Telebirr Developer App ID',
+              prefixIcon: const Icon(Icons.apps, size: 18),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               isDense: true,
             ),
@@ -1050,14 +1154,14 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
           const SizedBox(height: 12),
 
           // App Key
-          const Text('Telebirr App Key / Secret', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          const Text('Telebirr App Key', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
           const SizedBox(height: 4),
           TextField(
             controller: _telebirrAppKeyCtrl,
             obscureText: true,
             decoration: InputDecoration(
-              hintText: 'Enter Telebirr App Key',
-              prefixIcon: const Icon(Icons.lock, size: 18),
+              hintText: 'Enter Telebirr Developer App Key',
+              prefixIcon: const Icon(Icons.key, size: 18),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               isDense: true,
             ),
@@ -1065,31 +1169,53 @@ class _ApiGatewaySettingsModalState extends State<ApiGatewaySettingsModal>
           const SizedBox(height: 12),
 
           // ShortCode
-          const Text('ShortCode / Merchant Code', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          const Text('ShortCode', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
           const SizedBox(height: 4),
           TextField(
             controller: _telebirrShortCodeCtrl,
             decoration: InputDecoration(
               hintText: '10011',
-              prefixIcon: const Icon(Icons.numbers, size: 18),
+              prefixIcon: const Icon(Icons.tag, size: 18),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               isDense: true,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
-          // Test Button
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.blue.shade800,
-              side: BorderSide(color: Colors.blue.shade400),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          // Public Key
+          const Text('Telebirr Public Key', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          const SizedBox(height: 4),
+          TextField(
+            controller: _telebirrPublicKeyCtrl,
+            maxLines: 2,
+            decoration: InputDecoration(
+              hintText: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCg...',
+              prefixIcon: const Icon(Icons.vpn_key, size: 18),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              isDense: true,
             ),
-            onPressed: _testingConnection ? null : _testTelebirrConnection,
-            icon: _testingConnection
-                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.network_check, size: 16),
-            label: const Text('Test Telebirr Developer Connection'),
+          ),
+          const SizedBox(height: 16),
+
+          // Test Connection Button
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.blue.shade800,
+                    side: BorderSide(color: Colors.blue.shade400),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: _testingConnection ? null : _testTelebirrConnection,
+                  icon: _testingConnection
+                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.network_check, size: 16),
+                  label: const Text('Test Telebirr Gateway Connection', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
           ),
         ],
       ),

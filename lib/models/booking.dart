@@ -17,6 +17,7 @@ class Booking {
   final String guideName;
   final String tourName;
   final String notes;
+  final double? tourDurationHours;
 
   Booking({
     required this.id,
@@ -35,17 +36,25 @@ class Booking {
     this.guideName = '',
     this.tourName = '',
     this.notes = '',
+    this.tourDurationHours,
   });
 
   bool get isPending => status == 'pending';
   bool get isConfirmed => status == 'confirmed';
   bool get isCompleted => status == 'completed';
   bool get isCancelled => status == 'cancelled';
+  bool get isUpcoming => status == 'upcoming';
 
   String get formattedTotal => '${totalAmount.toStringAsFixed(0)} ETB';
 
   String get formattedTourDate =>
       '${tourDate.day}/${tourDate.month}/${tourDate.year}';
+
+  String get formattedTourTime {
+    final hour = tourDate.hour.toString().padLeft(2, '0');
+    final minute = tourDate.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
 
   factory Booking.fromMap(String id, Map<String, dynamic> map) {
     DateTime parse(dynamic val) {
@@ -78,6 +87,7 @@ class Booking {
       guideName: map['guideName'] as String? ?? '',
       tourName: map['tourName'] as String? ?? '',
       notes: map['notes'] as String? ?? '',
+      tourDurationHours: (map['tourDurationHours'] as num?)?.toDouble(),
     );
   }
 
@@ -97,7 +107,48 @@ class Booking {
       'guideName': guideName,
       'tourName': tourName,
       'notes': notes,
+      'tourDurationHours': tourDurationHours,
       'createdAt': FieldValue.serverTimestamp(),
     };
+  }
+
+  Booking copyWith({
+    String? id,
+    String? touristId,
+    String? guideId,
+    String? tourId,
+    DateTime? bookingDate,
+    DateTime? tourDate,
+    int? numberOfParticipants,
+    double? totalAmount,
+    String? status,
+    DateTime? createdAt,
+    String? touristName,
+    String? touristEmail,
+    String? touristPhone,
+    String? guideName,
+    String? tourName,
+    String? notes,
+    double? tourDurationHours,
+  }) {
+    return Booking(
+      id: id ?? this.id,
+      touristId: touristId ?? this.touristId,
+      guideId: guideId ?? this.guideId,
+      tourId: tourId ?? this.tourId,
+      bookingDate: bookingDate ?? this.bookingDate,
+      tourDate: tourDate ?? this.tourDate,
+      numberOfParticipants: numberOfParticipants ?? this.numberOfParticipants,
+      totalAmount: totalAmount ?? this.totalAmount,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      touristName: touristName ?? this.touristName,
+      touristEmail: touristEmail ?? this.touristEmail,
+      touristPhone: touristPhone ?? this.touristPhone,
+      guideName: guideName ?? this.guideName,
+      tourName: tourName ?? this.tourName,
+      notes: notes ?? this.notes,
+      tourDurationHours: tourDurationHours ?? this.tourDurationHours,
+    );
   }
 }

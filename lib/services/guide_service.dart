@@ -3,7 +3,9 @@ import '../models/guide.dart';
 import '../models/tour_package.dart';
 import '../models/booking.dart';
 import '../models/user_profile.dart';
+import '../models/payment.dart';
 import 'notification_service.dart';
+import 'chat_service.dart';
 
 class GuideService {
   static final GuideService _instance = GuideService._internal();
@@ -224,6 +226,129 @@ class GuideService {
     return getGuideBookingsStream(guideId).map(
       (list) => list.where((b) => b.isPending).length,
     );
+  }
+
+  // ==========================================
+  // DASHBOARD STATISTICS
+  // ==========================================
+
+  /// Get dashboard statistics for a tour guide
+  Stream<Map<String, dynamic>> getGuideDashboardStatsStream(String guideId) {
+    if (guideId.isEmpty) return Stream.value({});
+
+    return _db.collection('bookings').snapshots().asyncMap((snapshot) async {
+      // Get today's date
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final tomorrow = today.add(const Duration(days: 1));
+
+      // Get guide profile for rating
+      double rating = 0.0;
+      int reviewCount = 0;
+      try {
+        final guideDoc = await _db.collection('guides').doc(guideId).get();
+        if (guideDoc.exists && guideDoc.data() != null) {
+          final guide = Guide.fromMap(guideDoc.id, guideDoc.data()!);
+          rating = guide.rating;
+          reviewCount = guide.reviewCount;
+        }
+      } catch (_) {}
+
+      // Get all bookings for this guide
+      final bookings = snapshot.docs
+          .map((d) => Booking.fromMap(d.id, d.data()))
+          .where((b) => b.guideId == guideId)
+          .toList();
+
+      // Today's statistics
+      final todayBookings = bookings.where((b) {
+        final bookingDate = DateTime(b.tourDate.year, b.tourDate.month, b.tourDate.day);
+        return bookingDate.isAtSameMomentAs(today);
+      }).toList();
+
+      final todayTours = todayBookings.length;
+      final todayTourists = todayBookings.fold(0, (sum, b) => sum + b.numberOfParticipants);
+      final todayDuration = todayBookings.fold(0.0, (sum, b) => sum + (b.tourDurationHours ?? 0));
+      final todayEarnings = todayBookings
+          .where((b) => b.isConfirmed || b.isCompleted)
+          .fold(0.0, (sum, b) => sum + b.totalAmount);
+
+      // Calculate total duration in hours and minutes
+      final totalHours = todayDuration.floor();
+      final totalMinutes = ((todayDuration - totalHours) * 60).round();
+      final durationString = '${totalHours}h ${totalMinutes}m';
+
+      // Upcoming tours (confirmed, starting from today onwards)
+      final upcomingTours = bookings
+          .where((b) => (b.isConfirmed || b.isUpcoming) && b.tourDate.isAfter(today.subtract(const Duration(days: 1))))
+          .toList();
+      upcomingTours.sort((a, b) => a.tourDate.compareTo(b.tourDate));
+
+      // Get tour packages for tour details
+      final tourPackages = await fetchToursForGuide(guideId);
+      final tourMap = {for (var t in tourPackages) t.id: t};
+
+      // Performance summary (this month)
+      final thisMonth = DateTime(now.year, now.month, 1);
+      final nextMonth = thisMonth.month == 12 
+          ? DateTime(now.year + 1, 1, 1) 
+          : DateTime(now.year, thisMonth.month + 1, 1);
+
+      final monthBookings = bookings.where((b) {
+        return b.tourDate.isAtSameMomentAs(thisMonth) || 
+               (b.tourDate.isAfter(thisMonth) && b.tourDate.isBefore(nextMonth));
+      }).toList();
+
+      final totalTours = monthBookings.length;
+      final totalTourists = monthBookings.fold(0, (sum, b) => sum + b.numberOfParticipants);
+      final totalEarnings = monthBookings
+          .where((b) => b.isConfirmed || b.isCompleted)
+          .fold(0.0, (sum, b) => sum + b.totalAmount);
+
+      // Generate monthly data for graph (last 6 months)
+      final monthlyData = <int>[];
+      for (int i = 5; i >= 0; i--) {
+        final monthDate = DateTime(now.year, now.month - i, 1);
+        final nextMonthDate = monthDate.month == 12 
+            ? DateTime(monthDate.year + 1, 1, 1) 
+            : DateTime(monthDate.year, monthDate.month + 1, 1);
+        
+        final monthTours = bookings.where((b) {
+          return b.tourDate.isAtSameMomentAs(monthDate) || 
+                 (b.tourDate.isAfter(monthDate) && b.tourDate.isBefore(nextMonthDate));
+        }).length;
+        
+        monthlyData.add(monthTours);
+      }
+
+      // Get unread messages count
+      int unreadMessagesCount = 0;
+      try {
+        final chatService = ChatService();
+        final guideUser = await getGuideById(guideId);
+        if (guideUser != null && guideUser.userId.isNotEmpty) {
+          final unreadStream = chatService.getTotalUnreadMessagesCountStream(guideUser.userId);
+          final unread = await unreadStream.first;
+          unreadMessagesCount = unread;
+        }
+      } catch (_) {}
+
+      return {
+        'todayTours': todayTours,
+        'todayTourists': todayTourists,
+        'todayDuration': durationString,
+        'todayEarnings': todayEarnings,
+        'upcomingTours': upcomingTours.take(5).toList(),
+        'tourMap': tourMap,
+        'totalTours': totalTours,
+        'totalTourists': totalTourists,
+        'avgRating': rating,
+        'reviewCount': reviewCount,
+        'totalEarnings': totalEarnings,
+        'unreadMessagesCount': unreadMessagesCount,
+        'monthlyData': monthlyData,
+      };
+    });
   }
 
   Future<UserProfile?> getUserProfile(String uid) async {

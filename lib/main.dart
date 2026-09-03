@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'theme/ethio_theme.dart';
+import 'services/theme_service.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
 import 'pages/dashboard_page.dart';
@@ -16,6 +17,7 @@ import 'pages/providers/register_provider_page.dart';
 import 'pages/providers/provider_dashboard_page.dart';
 import 'pages/providers/admin_providers_page.dart';
 import 'pages/admin/admin_dashboard.dart';
+import 'pages/guides/guide_dashboard_page.dart';
 import 'pages/recommendations_page.dart';
 // This app expects you to run `flutterfire configure` locally to generate
 // lib/firebase_options.dart with DefaultFirebaseOptions. After that the app
@@ -35,81 +37,92 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late Future<FirebaseApp> _initialization;
+  late Future<void> _themeInitialization;
+  final ThemeService _themeService = ThemeService();
 
   @override
   void initState() {
     super.initState();
     // Initialize Firebase with the generated platform-specific options.
     _initialization = Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    _themeInitialization = _themeService.initialize();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'EthioAR Guide',
-      theme: buildEthioTheme(),
-      routes: {
-        '/login': (_) => const LoginPage(),
-        '/register': (_) => const RegisterPage(),
-        '/dashboard': (_) => const DashboardPage(),
-        '/choose-journey': (_) => const ChooseJourneyPage(),
-        '/guided-journey': (_) => const GuidedJourneyDashboardPage(),
-        '/ar-discovery': (_) => const ArDiscoveryDashboardPage(),
-        '/profile': (_) => const ProfilePage(),
-        '/nearby': (_) => const NearbyLandmarksPage(),
-        '/services': (_) => const ServiceProvidersListPage(),
-        '/my-reservations': (_) => const MyReservationsPage(),
-        '/provider-dashboard': (_) => const ProviderDashboardPage(),
-        '/register-provider': (_) => const RegisterProviderPage(),
-        '/admin-providers': (_) => const AdminProvidersPage(),
-        '/admin-dashboard': (_) => const AdminDashboard(),
-        '/recommendations': (_) => const RecommendationsPage(),
-      },
-      home: FutureBuilder<FirebaseApp>(
-        future: _initialization,
-        builder: (context, snapshot) {
-          // Show loading while initializing
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
+    return ListenableBuilder(
+      listenable: _themeService,
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'EthioAR Guide',
+          theme: buildEthioTheme(),
+          darkTheme: buildEthioDarkTheme(),
+          themeMode: _themeService.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          routes: {
+            '/login': (_) => const LoginPage(),
+            '/register': (_) => const RegisterPage(),
+            '/dashboard': (_) => const DashboardPage(),
+            '/choose-journey': (_) => const ChooseJourneyPage(),
+            '/guided-journey': (_) => const GuidedJourneyDashboardPage(),
+            '/ar-discovery': (_) => const ArDiscoveryDashboardPage(),
+            '/profile': (_) => const ProfilePage(),
+            '/nearby': (_) => const NearbyLandmarksPage(),
+            '/services': (_) => const ServiceProvidersListPage(),
+            '/my-reservations': (_) => const MyReservationsPage(),
+            '/provider-dashboard': (_) => const ProviderDashboardPage(),
+            '/register-provider': (_) => const RegisterProviderPage(),
+            '/admin-providers': (_) => const AdminProvidersPage(),
+            '/admin-dashboard': (_) => const AdminDashboard(),
+            '/guide-dashboard': (_) => const GuideDashboardPage(),
+            '/recommendations': (_) => const RecommendationsPage(),
+          },
+          home: FutureBuilder<FirebaseApp>(
+            future: _initialization,
+            builder: (context, snapshot) {
+              // Show loading while initializing
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
 
-          // If initialization failed, show an error but allow the user to continue
-          if (snapshot.hasError) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('EthioAR Guide')),
-              body: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error, size: 48, color: Colors.red),
-                      const SizedBox(height: 12),
-                      const Text('⚠️ Firebase initialization failed', style: TextStyle(fontSize: 18)),
-                      const SizedBox(height: 8),
-                      Text(snapshot.error.toString()),
-                      const SizedBox(height: 16),
-                      Builder(
-                        builder: (btnContext) => ElevatedButton(
-                          onPressed: () => Navigator.of(btnContext).push(
-                            MaterialPageRoute(builder: (_) => const HomeDecider()),
-                          ),
-                          child: const Text('Continue (offline)'),
-                        ),
-                      )
-                    ],
+              // If initialization failed, show an error but allow the user to continue
+              if (snapshot.hasError) {
+                return Scaffold(
+                  appBar: AppBar(title: const Text('EthioAR Guide')),
+                  body: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error, size: 48, color: Colors.red),
+                          const SizedBox(height: 12),
+                          const Text('⚠️ Firebase initialization failed', style: TextStyle(fontSize: 18)),
+                          const SizedBox(height: 8),
+                          Text(snapshot.error.toString()),
+                          const SizedBox(height: 16),
+                          Builder(
+                            builder: (btnContext) => ElevatedButton(
+                              onPressed: () => Navigator.of(btnContext).push(
+                                MaterialPageRoute(builder: (_) => const HomeDecider()),
+                              ),
+                              child: const Text('Continue (offline)'),
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            );
-          }
+                );
+              }
 
-          // Initialization succeeded — show the app
-          return const HomeDecider();
-        },
-      ),
+              // Initialization succeeded — show the app
+              return const HomeDecider();
+            },
+          ),
+        );
+      },
     );
   }
 }

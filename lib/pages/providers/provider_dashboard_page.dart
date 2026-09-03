@@ -13,7 +13,8 @@ import 'provider_edit_profile_page.dart';
 import '../chat/conversations_list_page.dart';
 
 class ProviderDashboardPage extends StatefulWidget {
-  const ProviderDashboardPage({super.key});
+  final ServiceProvider? provider;
+  const ProviderDashboardPage({super.key, this.provider});
 
   @override
   State<ProviderDashboardPage> createState() => _ProviderDashboardPageState();
@@ -25,6 +26,7 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
 
   ServiceProvider? _provider;
   bool _loading = true;
+
   Map<String, dynamic> _dashboardStats = {
     'reservationsCount': 0,
     'confirmedReservations': 0,
@@ -37,7 +39,20 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
   @override
   void initState() {
     super.initState();
-    _loadProviderProfile();
+    _provider = widget.provider;
+    if (_provider != null) {
+      _loading = false;
+      // Load dashboard stats
+      _service.getProviderDashboardStatsStream(_provider!.id).listen((stats) {
+        if (mounted) {
+          setState(() {
+            _dashboardStats = stats;
+          });
+        }
+      });
+    } else {
+      _loadProviderProfile();
+    }
   }
 
   Future<void> _loadProviderProfile() async {
@@ -65,24 +80,20 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
     }
   }
 
-  void _refreshProviderProfile() {
-    _loadProviderProfile();
-  }
-
 
 
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const AppScaffold(
-        title: 'Provider Dashboard',
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        appBar: AppBar(title: const Text('Provider Dashboard')),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_provider == null) {
-      return AppScaffold(
-        title: 'Provider Dashboard',
+      return Scaffold(
+        appBar: AppBar(title: const Text('Provider Dashboard')),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -119,21 +130,7 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
       );
     }
 
-    return AppScaffold(
-      title: 'Provider Portal',
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.logout),
-          tooltip: 'Logout',
-          onPressed: () async {
-            await _auth.signOut();
-            if (mounted) {
-              Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-            }
-          },
-        ),
-        const NotificationBellButton(),
-      ],
+    return Scaffold(
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -299,91 +296,6 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            
-            // Portal Access Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Portal Access',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  child: Text('View All', style: TextStyle(fontSize: 12, color: Colors.teal.shade700)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            
-            // Portal Access Cards
-            _buildPortalAccessCard(
-              icon: Icons.edit,
-              title: 'Edit Profile',
-              subtitle: 'Update your business information and settings',
-              onTap: () async {
-                final result = await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => ProviderEditProfilePage(provider: _provider!)),
-                );
-                if (result != null && result is ServiceProvider) {
-                  _refreshProviderProfile();
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-            _buildPortalAccessCard(
-              icon: Icons.analytics,
-              title: 'My Business Dashboard',
-              subtitle: 'Manage your business profile and services',
-              onTap: () {
-                SnackbarHelper.show(context, 'You are already on the dashboard');
-              },
-            ),
-            const SizedBox(height: 8),
-            _buildPortalAccessCard(
-              icon: Icons.forum,
-              title: 'Messages & Inquiries',
-              subtitle: 'Chat with tourists and respond to inquiries',
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ConversationsListPage()),
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            _buildPortalAccessCard(
-              icon: Icons.calendar_month,
-              title: 'Reservations',
-              subtitle: 'View and manage booking requests',
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ProviderReservationsPage()),
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            _buildPortalAccessCard(
-              icon: Icons.account_balance_wallet,
-              title: 'Payments',
-              subtitle: 'Track earnings and payment history',
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ProviderPaymentsPage()),
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            _buildPortalAccessCard(
-              icon: Icons.notifications_active,
-              title: 'Notifications',
-              subtitle: 'View system notifications and alerts',
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ProviderNotificationsPage()),
-                );
-              },
-            ),
           ],
         ),
       ),
@@ -439,56 +351,6 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
               Text(
                 subtitle,
                 style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPortalAccessCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.teal.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: Colors.teal.shade700, size: 22),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    const SizedBox(height: 2),
-                    Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade600),
               ),
             ],
           ),

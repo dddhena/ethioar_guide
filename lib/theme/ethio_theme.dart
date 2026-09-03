@@ -215,6 +215,198 @@ ThemeData buildEthioTheme() {
   );
 }
 
+ThemeData buildEthioDarkTheme() {
+  final colorScheme = ColorScheme(
+    brightness: Brightness.dark,
+    primary: EthioColors.forestLight,
+    onPrimary: Colors.white,
+    primaryContainer: EthioColors.forest.withValues(alpha: 0.15),
+    onPrimaryContainer: EthioColors.forestLight,
+    secondary: EthioColors.terracotta,
+    onSecondary: Colors.white,
+    secondaryContainer: EthioColors.terracotta.withValues(alpha: 0.15),
+    onSecondaryContainer: EthioColors.terracotta,
+    tertiary: EthioColors.slate,
+    onTertiary: Colors.white,
+    tertiaryContainer: EthioColors.slate.withValues(alpha: 0.15),
+    onTertiaryContainer: EthioColors.slate,
+    surface: const Color(0xFF1A1A1A),
+    onSurface: const Color(0xFFE0E0E0),
+    error: EthioColors.emergency,
+    onError: Colors.white,
+    outline: const Color(0xFF3A3A3A),
+    shadow: EthioColors.cardShadow,
+  );
+
+  final baseTheme = ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    colorScheme: colorScheme,
+    scaffoldBackgroundColor: const Color(0xFF121212),
+    fontFamily: 'Segoe UI',
+  );
+
+  final textTheme = baseTheme.textTheme.copyWith(
+    headlineMedium: baseTheme.textTheme.headlineMedium?.copyWith(
+      fontSize: 26,
+      fontWeight: FontWeight.w700,
+      color: const Color(0xFFE0E0E0),
+      letterSpacing: -0.6,
+      height: 1.2,
+    ),
+    titleLarge: baseTheme.textTheme.titleLarge?.copyWith(
+      fontSize: 20,
+      fontWeight: FontWeight.w600,
+      color: const Color(0xFFE0E0E0),
+      letterSpacing: -0.3,
+    ),
+    titleMedium: baseTheme.textTheme.titleMedium?.copyWith(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: const Color(0xFFE0E0E0),
+    ),
+    bodyLarge: baseTheme.textTheme.bodyLarge?.copyWith(
+      fontSize: 15,
+      color: const Color(0xFFB0B0B0),
+      height: 1.5,
+    ),
+    bodyMedium: baseTheme.textTheme.bodyMedium?.copyWith(
+      fontSize: 14,
+      color: const Color(0xFF909090),
+      height: 1.45,
+    ),
+    labelLarge: baseTheme.textTheme.labelLarge?.copyWith(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.8,
+      color: const Color(0xFF909090),
+    ),
+  );
+
+  return baseTheme.copyWith(
+    textTheme: textTheme,
+    appBarTheme: AppBarTheme(
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      backgroundColor: const Color(0xFF1A1A1A),
+      foregroundColor: const Color(0xFFE0E0E0),
+      centerTitle: false,
+      titleTextStyle: textTheme.titleMedium?.copyWith(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: const Color(0xFFE0E0E0),
+        letterSpacing: -0.2,
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        elevation: 0,
+        backgroundColor: EthioColors.forestLight,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: const Color(0xFF3A3A3A),
+        disabledForegroundColor: const Color(0xFF606060),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        textStyle: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: EthioColors.forestLight,
+        side: const BorderSide(color: EthioColors.forestLight, width: 1.5),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        textStyle: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
+        ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: EthioColors.forestLight,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+    ),
+    cardTheme: CardThemeData(
+      elevation: 0,
+      color: const Color(0xFF2A2A2A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shadowColor: EthioColors.cardShadow,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: const Color(0xFF2A2A2A),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFF3A3A3A), width: 1),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFF3A3A3A), width: 1),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: EthioColors.forestLight, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: EthioColors.emergency, width: 1),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: EthioColors.emergency, width: 2),
+      ),
+      hintStyle: const TextStyle(color: Color(0xFF606060), fontSize: 14),
+      labelStyle: const TextStyle(color: Color(0xFF606060), fontSize: 14),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: const Color(0xFF2A2A2A),
+      disabledColor: const Color(0xFF3A3A3A),
+      selectedColor: EthioColors.forestLight.withValues(alpha: 0.2),
+      secondarySelectedColor: EthioColors.forestLight.withValues(alpha: 0.2),
+      labelStyle: const TextStyle(color: Color(0xFFE0E0E0), fontSize: 12, fontWeight: FontWeight.w500),
+      secondaryLabelStyle: const TextStyle(color: EthioColors.forestLight, fontSize: 12, fontWeight: FontWeight.bold),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+      side: BorderSide.none,
+      checkmarkColor: EthioColors.forestLight,
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      height: 64,
+      backgroundColor: const Color(0xFF1A1A1A),
+      elevation: 8,
+      shadowColor: EthioColors.cardShadow,
+      indicatorColor: EthioColors.forestLight.withValues(alpha: 0.15),
+      indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      labelTextStyle: MaterialStateProperty.resolveWith((states) {
+        final isSelected = states.contains(MaterialState.selected);
+        return TextStyle(
+          fontSize: 11,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          color: isSelected ? EthioColors.forestLight : const Color(0xFF606060),
+        );
+      }),
+      iconTheme: MaterialStateProperty.resolveWith((states) {
+        final isSelected = states.contains(MaterialState.selected);
+        return IconThemeData(
+          size: 24,
+          color: isSelected ? EthioColors.forestLight : const Color(0xFF606060),
+        );
+      }),
+    ),
+  );
+}
+
 BoxDecoration ethioGlassCard({Color? tint, double radius = 20}) {
   return BoxDecoration(
     borderRadius: BorderRadius.circular(radius),
