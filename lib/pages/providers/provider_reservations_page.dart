@@ -11,7 +11,8 @@ import 'register_provider_page.dart';
 import 'provider_qr_scanner_page.dart';
 
 class ProviderReservationsPage extends StatefulWidget {
-  const ProviderReservationsPage({super.key});
+  final bool showAppBar;
+  const ProviderReservationsPage({super.key, this.showAppBar = true});
 
   @override
   State<ProviderReservationsPage> createState() => _ProviderReservationsPageState();
@@ -51,21 +52,21 @@ class _ProviderReservationsPageState extends State<ProviderReservationsPage> {
     final user = _auth.currentUser;
 
     if (user == null) {
-      return AppScaffold(
+      return _buildScaffold(
         title: 'Reservations',
         body: const Center(child: Text('Please log in as a provider.')),
       );
     }
 
     if (_loadingProfile) {
-      return AppScaffold(
+      return _buildScaffold(
         title: 'Incoming Reservations',
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_provider == null) {
-      return AppScaffold(
+      return _buildScaffold(
         title: 'Incoming Reservations',
         body: Center(
           child: Padding(
@@ -105,7 +106,7 @@ class _ProviderReservationsPageState extends State<ProviderReservationsPage> {
 
     final queryTarget = _provider!.id.isNotEmpty ? _provider!.id : user.uid;
 
-    return AppScaffold(
+    return _buildScaffold(
       title: 'Incoming Reservations',
       actions: [
         IconButton(
@@ -320,5 +321,23 @@ class _ProviderReservationsPageState extends State<ProviderReservationsPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildScaffold({
+    required String title,
+    required Widget body,
+    List<Widget>? actions,
+  }) {
+    if (widget.showAppBar) {
+      return AppScaffold(
+        title: title,
+        actions: actions,
+        body: body,
+      );
+    } else {
+      return Scaffold(
+        body: body,
+      );
+    }
   }
 }

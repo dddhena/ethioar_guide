@@ -74,12 +74,161 @@ When answering itinerary/trip questions, provide structured day-by-day plans wit
 Suggest indoor/museum activities if weather is rainy or stormy.
 ''';
 
-  static const List<String> _models = [
+  static const _defaultModels = [
     'gemini-3.6-flash',
-    'gemini-3.6-pro',
+    'gemini-3.7-flash',
+    'gemini-3.8-flash',
+    'gemini-2.5-flash',
+    'gemini-flash',
   ];
 
+  static List<String> _cachedModels = [];
+  static DateTime? _lastModelFetchTime;
   String _activeModel = 'gemini-3.6-flash';
+
+  /// Dynamically queries Google Generative Language API for models supporting generateContent.
+  /// This ensures any new Gemini models released by Google in the future are discovered automatically.
+  static Future<List<String>> listAvailableModels({String? apiKey}) async {
+    final key = apiKey ?? ApiConfig.geminiApiKey;
+    if (key.trim().isEmpty) return [];
+
+    if (_cachedModels.isNotEmpty &&
+        _lastModelFetchTime != null &&
+        DateTime.now().difference(_lastModelFetchTime!).inMinutes < 60) {
+      return _cachedModels;
+    }
+
+    try {
+      final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models?key=$key');
+      final res = await http.get(url).timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body);
+        final rawList = data['models'] as List?;
+        if (rawList != null) {
+          final found = <String>[];
+          for (final item in rawList) {
+            final name = (item['name'] as String? ?? '').replaceFirst('models/', '');
+            final methods = (item['supportedGenerationMethods'] as List?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                [];
+            if (methods.contains('generateContent') && name.contains('gemini')) {
+              found.add(name);
+            }
+          }
+          if (found.isNotEmpty) {
+            // Sort: prioritize 'flash' and newer version numbers
+            found.sort((a, b) {
+              final aFlash = a.contains('flash');
+              final bFlash = b.contains('flash');
+              if (aFlash && !bFlash) return -1;
+              if (!aFlash && bFlash) return 1;
+              return b.compareTo(a);
+            });
+            _cachedModels = found;
+            _lastModelFetchTime = DateTime.now();
+            return found;
+          }
+        }
+      }
+    } catch (e) {
+      print('[GeminiService] Dynamic model list notice: $e');
+    }
+    return _cachedModels.isNotEmpty ? _cachedModels : _defaultModels;
+  }
+
+  /// Tests Gemini connection with the current or provided API key.
+  Future<Map<String, dynamic>> testConnection({String? apiKey}) async {
+    final key = (apiKey != null && apiKey.trim().isNotEmpty) ? apiKey.trim() : ApiConfig.geminiApiKey;
+    if (key.isEmpty) {
+      return {'success': false, 'message': 'API Key is empty. Please enter a valid Gemini API key.'};
+    }
+
+    // 1. Discover live available models from Google API
+    final available = await listAvailableModels(apiKey: key);
+    final primaryModel = ApiConfig.selectedGeminiModel.isNotEmpty
+        ? ApiConfig.selectedGeminiModel
+        : (available.isNotEmpty ? available.first : 'gemini-3.6-flash');
+
+    final testModels = [
+      primaryModel,
+      ...available.where((m) => m != primaryModel),
+      ..._defaultModels.where((m) => m != primaryModel && !available.contains(m)),
+    ];
+
+    for (final model in testModels.take(4)) {
+      try {
+        final url = Uri.parse(
+          'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$key',
+        );
+        final body = json.encode({
+          'contents': [
+            {
+              'role': 'user',
+              'parts': [
+                {'text': 'Hello from EthioAR Guide! Reply with a 5-word warm greeting.'}
+              ]
+            }
+          ],
+          'generationConfig': {'maxOutputTokens': 50, 'temperature': 0.7}
+        });
+
+        final res = await http.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: body,
+        ).timeout(const Duration(seconds: 15));
+
+        if (res.statusCode == 200) {
+          final data = json.decode(res.body);
+          String reply = 'Connected';
+          final candidates = data['candidates'] as List?;
+          if (candidates != null && candidates.isNotEmpty) {
+            final firstCandidate = candidates[0];
+            if (firstCandidate is Map) {
+              final content = firstCandidate['content'];
+              if (content is Map) {
+                final parts = content['parts'];
+                if (parts is List && parts.isNotEmpty) {
+                  final firstPart = parts[0];
+                  if (firstPart is Map && firstPart['text'] != null) {
+                    reply = firstPart['text'].toString();
+                  }
+                }
+              }
+            }
+          }
+
+          _activeModel = model;
+          ApiConfig.selectedGeminiModel = model;
+          return {
+            'success': true,
+            'model': model,
+            'reply': reply.trim(),
+            'message': 'Connected to Gemini ($model)! AI Guide is live.',
+            'availableModels': available,
+          };
+        } else if (res.statusCode == 404) {
+          // Check if Google returned a recommended model in the error message
+          final match = RegExp(r'models/([a-zA-Z0-9\.\-_]+)').firstMatch(res.body);
+          if (match != null) {
+            final suggested = match.group(1);
+            if (suggested != null && !testModels.contains(suggested)) {
+              testModels.add(suggested);
+            }
+          }
+        }
+      } catch (e) {
+        // Try next model in sequence
+      }
+    }
+
+    return {
+      'success': false,
+      'message': 'Could not connect to Gemini models. Check your internet connection and API key.',
+      'availableModels': available,
+    };
+  }
 
   Future<AiGuideResponse> chat({
     required String userMessage,
@@ -95,21 +244,29 @@ Suggest indoor/museum activities if weather is rainy or stormy.
         userMessage,
         context,
         allLandmarks,
-        note: '💡 Tip: Tap the 🔑 icon at the top to add your Gemini API Key for live AI answers!',
+        note: '💡 Offline Travel Guide Mode active.',
       );
     }
 
     final promptText = '${context.toPromptBlock()}\n\nUser Question: $userMessage';
 
-    // Try models in sequence
-    final modelsToTry = [
-      _activeModel,
-      ..._models.where((m) => m != _activeModel),
-    ];
+    // 1. Gather candidate models: preference -> discovered -> defaults
+    final preferred = ApiConfig.selectedGeminiModel.isNotEmpty
+        ? ApiConfig.selectedGeminiModel
+        : _activeModel;
 
+    final candidateSet = <String>{preferred, _activeModel};
+    if (_cachedModels.isNotEmpty) {
+      candidateSet.addAll(_cachedModels);
+    } else {
+      candidateSet.addAll(_defaultModels);
+    }
+
+    final modelsToTry = candidateSet.toList();
     String? lastError;
 
-    for (final modelName in modelsToTry) {
+    for (int i = 0; i < modelsToTry.length; i++) {
+      final modelName = modelsToTry[i];
       try {
         print('[GeminiService] Calling Gemini API ($modelName)...');
         final url = Uri.parse(
@@ -130,15 +287,20 @@ Suggest indoor/museum activities if weather is rainy or stormy.
         contents.add({
           'role': 'user',
           'parts': [
-            {'text': 'System: $_systemPrompt\n\n$promptText'}
+            {'text': promptText}
           ],
         });
 
         final body = json.encode({
+          'systemInstruction': {
+            'parts': [
+              {'text': _systemPrompt}
+            ]
+          },
           'contents': contents,
           'generationConfig': {
             'temperature': 0.7,
-            'maxOutputTokens': 1000,
+            'maxOutputTokens': 1200,
           },
         });
 
@@ -148,7 +310,7 @@ Suggest indoor/museum activities if weather is rainy or stormy.
               headers: {'Content-Type': 'application/json'},
               body: body,
             )
-            .timeout(const Duration(seconds: 30));
+            .timeout(const Duration(seconds: 20));
 
         print('[GeminiService] HTTP ${response.statusCode}');
 
@@ -161,7 +323,8 @@ Suggest indoor/museum activities if weather is rainy or stormy.
             if (parts != null && parts.isNotEmpty) {
               final rawText = parts[0]['text'] as String?;
               if (rawText != null && rawText.trim().isNotEmpty) {
-                _activeModel = modelName; // remember the successful model
+                _activeModel = modelName;
+                ApiConfig.selectedGeminiModel = modelName;
                 print('[GeminiService] Successfully received response from $modelName');
 
                 final placeCards = matchLandmarksInText(rawText, allLandmarks);
@@ -182,14 +345,26 @@ Suggest indoor/museum activities if weather is rainy or stormy.
           final errBody = response.body;
           print('[GeminiService] API Error ($modelName): ${response.statusCode} - $errBody');
           lastError = 'HTTP ${response.statusCode}';
+
+          // Auto-discover model recommendations from API response
+          final recMatch = RegExp(r'use models/([a-zA-Z0-9\.\-_]+)').firstMatch(errBody) ??
+              RegExp(r'models/([a-zA-Z0-9\.\-_]+)').firstMatch(errBody);
+          if (recMatch != null) {
+            final recModel = recMatch.group(1);
+            if (recModel != null && !modelsToTry.contains(recModel)) {
+              print('[GeminiService] Auto-discovered newer Gemini model from API: $recModel');
+              modelsToTry.insert(i + 1, recModel);
+            }
+          }
+
           if (response.statusCode == 400 || response.statusCode == 403) {
-            // Likely invalid API key or permission
             try {
               final errJson = json.decode(errBody);
               final msg = errJson['error']?['message'];
               if (msg != null) lastError = msg.toString();
             } catch (_) {}
-            break;
+            // If it's a key permission/invalid key issue, stop trying
+            if (response.statusCode == 403) break;
           }
         }
       } catch (e) {
@@ -197,6 +372,11 @@ Suggest indoor/museum activities if weather is rainy or stormy.
         lastError = e.toString();
       }
     }
+
+    // Trigger background refresh of models for next time if failed
+    listAvailableModels(apiKey: apiKey).then((models) {
+      if (models.isNotEmpty) _cachedModels = models;
+    }).catchError((_) {});
 
     print('[GeminiService] Falling back to structured responses. Last error: $lastError');
     return _fallbackResponse(

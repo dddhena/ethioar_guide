@@ -7,7 +7,8 @@ import '../../widgets/app_scaffold.dart';
 import 'chat_page.dart';
 
 class ConversationsListPage extends StatefulWidget {
-  const ConversationsListPage({super.key});
+  final bool showAppBar;
+  const ConversationsListPage({super.key, this.showAppBar = true});
 
   @override
   State<ConversationsListPage> createState() => _ConversationsListPageState();
@@ -54,7 +55,7 @@ class _ConversationsListPageState extends State<ConversationsListPage> {
     final user = _auth.currentUser;
 
     if (user == null) {
-      return AppScaffold(
+      return _buildScaffold(
         title: 'Messages & Support',
         body: Center(
           child: Column(
@@ -69,7 +70,7 @@ class _ConversationsListPageState extends State<ConversationsListPage> {
       );
     }
 
-    return AppScaffold(
+    return _buildScaffold(
       title: 'Messages & Inquiries',
       actions: [
         IconButton(
@@ -279,6 +280,24 @@ class _ConversationsListPageState extends State<ConversationsListPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildScaffold({
+    required String title,
+    required Widget body,
+    List<Widget>? actions,
+  }) {
+    if (widget.showAppBar) {
+      return AppScaffold(
+        title: title,
+        actions: actions,
+        body: body,
+      );
+    } else {
+      return Scaffold(
+        body: body,
+      );
+    }
   }
 
   Widget _filterChip(String roleKey, String label) {

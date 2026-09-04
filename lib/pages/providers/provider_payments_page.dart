@@ -7,7 +7,8 @@ import '../../models/service_provider.dart';
 import 'register_provider_page.dart';
 
 class ProviderPaymentsPage extends StatefulWidget {
-  const ProviderPaymentsPage({super.key});
+  final bool showAppBar;
+  const ProviderPaymentsPage({super.key, this.showAppBar = true});
 
   @override
   State<ProviderPaymentsPage> createState() => _ProviderPaymentsPageState();
@@ -46,21 +47,21 @@ class _ProviderPaymentsPageState extends State<ProviderPaymentsPage> {
     final user = _auth.currentUser;
 
     if (user == null) {
-      return AppScaffold(
+      return _buildScaffold(
         title: 'Received Payments',
         body: const Center(child: Text('Please log in as a provider.')),
       );
     }
 
     if (_loadingProfile) {
-      return AppScaffold(
+      return _buildScaffold(
         title: 'Received Payments',
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_provider == null) {
-      return AppScaffold(
+      return _buildScaffold(
         title: 'Received Payments',
         body: Center(
           child: Padding(
@@ -100,7 +101,7 @@ class _ProviderPaymentsPageState extends State<ProviderPaymentsPage> {
 
     final queryTarget = _provider!.id.isNotEmpty ? _provider!.id : user.uid;
 
-    return AppScaffold(
+    return _buildScaffold(
       title: 'Received Payments',
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,5 +281,21 @@ class _ProviderPaymentsPageState extends State<ProviderPaymentsPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildScaffold({
+    required String title,
+    required Widget body,
+  }) {
+    if (widget.showAppBar) {
+      return AppScaffold(
+        title: title,
+        body: body,
+      );
+    } else {
+      return Scaffold(
+        body: body,
+      );
+    }
   }
 }

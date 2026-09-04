@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/payment.dart';
 import '../services/auth_service.dart';
 import '../services/service_provider_service.dart';
-import '../widgets/api_gateway_settings_modal.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/qr_ticket_modal.dart';
 
@@ -33,13 +32,6 @@ class TouristPaymentsPage extends StatelessWidget {
 
     return AppScaffold(
       title: 'My Payments',
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.tune),
-          tooltip: 'Payment Gateway & API Config',
-          onPressed: () => ApiGatewaySettingsModal.show(context, initialTabIndex: 1),
-        ),
-      ],
       body: StreamBuilder<List<Payment>>(
         stream: service.getTouristPaymentsStream(user.uid),
         builder: (context, snapshot) {

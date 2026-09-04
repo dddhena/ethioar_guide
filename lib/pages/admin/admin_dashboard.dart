@@ -6,16 +6,14 @@ import '../../services/emergency_service.dart';
 import '../../services/payment_service.dart';
 import '../../models/emergency_alert.dart';
 import '../../models/payment.dart';
-import '../../models/booking.dart';
 import 'admin_emergency_dashboard.dart';
 import 'admin_payment_verification_page.dart';
+import 'admin_system_config_page.dart';
 import '../admin_pages.dart';
 import '../providers/admin_providers_page.dart';
 import '../chat/conversations_list_page.dart';
 import '../landmarks_page.dart';
-import '../profile_page.dart';
 import '../login_page.dart';
-import '../tourist_home_router.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -188,8 +186,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     index: 8,
                   ),
                   _buildNavItem(
-                    icon: Icons.settings,
-                    label: 'System Settings',
+                    icon: Icons.settings_suggest,
+                    label: 'System Configuration',
                     index: 9,
                   ),
                   _buildNavItem(
@@ -533,7 +531,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 6: return 'Support Desk';
       case 7: return 'Messages';
       case 8: return 'Reports & Analytics';
-      case 9: return 'System Settings';
+      case 9: return 'System Configuration';
       case 10: return 'Activity Logs';
       default: return 'Dashboard';
     }
@@ -1167,6 +1165,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               _buildQuickActionButton('Manage Users', Icons.people, () => _navigateToPage(1)),
               _buildQuickActionButton('Verify Providers', Icons.verified, () => _navigateToPage(2)),
               _buildQuickActionButton('Entrance Payments', Icons.payment, () => _navigateToPage(3)),
+              _buildQuickActionButton('System Configuration', Icons.settings_suggest, () => _navigateToPage(9)),
               _buildQuickActionButton('Add Landmark', Icons.add_location, () => _navigateToPage(4)),
               _buildQuickActionButton('View Reports', Icons.analytics, () => _navigateToPage(8)),
             ],
@@ -1510,16 +1509,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildSettingsPage() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.settings, size: 64, color: Colors.grey.shade400),
-          const SizedBox(height: 16),
-          const Text('System Settings'),
-        ],
-      ),
-    );
+    return const AdminSystemConfigPage(isEmbedded: true);
   }
 
   Widget _buildActivityLogsPage() {

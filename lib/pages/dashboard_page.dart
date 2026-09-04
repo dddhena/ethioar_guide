@@ -3,6 +3,7 @@ import '../theme/ethio_theme.dart';
 import '../models/user_profile.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/theme_service.dart';
 import '../widgets/app_scaffold.dart';
 import 'camera_preview.dart';
 import 'landmarks_page.dart';
@@ -11,10 +12,10 @@ import 'profile_page.dart';
 import 'nearby_landmarks_page.dart';
 import 'providers/service_providers_list_page.dart';
 import 'providers/my_reservations_page.dart';
-import 'providers/provider_dashboard_page.dart';
-import 'providers/provider_reservations_page.dart';
-import 'providers/provider_payments_page.dart';
-import 'providers/provider_notifications_page.dart';
+import 'providers/provider_navigation_wrapper.dart';
+import 'providers/provider_edit_profile_page.dart';
+import '../../services/service_provider_service.dart';
+import '../../models/service_provider.dart';
 import 'providers/admin_providers_page.dart';
 import 'tourist_payments_page.dart';
 import '../widgets/notification_bell_button.dart';
@@ -41,7 +42,10 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   final AuthService _auth = AuthService();
   final FirestoreService _fs = FirestoreService();
+  final ServiceProviderService _providerService = ServiceProviderService();
+  final ThemeService _themeService = ThemeService();
   UserProfile _profile = UserProfile(uid: '', name: 'Guest', email: '', role: 'tourist');
+  ServiceProvider? _provider;
   bool _loading = true;
 
   @override
@@ -64,8 +68,22 @@ class _DashboardPageState extends State<DashboardPage> {
       if (!mounted) return;
       setState(() {
         _profile = profile;
-        _loading = false;
       });
+
+      if (profile.isProvider) {
+        final provider = await _providerService.getProviderByUserId(uid);
+        if (mounted) {
+          setState(() {
+            _provider = provider;
+          });
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -282,42 +300,25 @@ class _DashboardPageState extends State<DashboardPage> {
 
   /// 🏢 Service Provider: business dashboard only
   List<Widget> get _providerSection => [
-        _sectionHeader('Service Provider Portal'),
         _primaryBtn(
           icon: Icons.store_mall_directory,
           label: '🏢 My Business Dashboard',
           color: EthioColors.providerBlue,
           onPressed: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => ProviderDashboardPage())),
+              .push(MaterialPageRoute(builder: (_) => ProviderNavigationWrapper(provider: _provider))),
         ),
-        _primaryBtn(
-          icon: Icons.chat,
-          label: '💬 Messages & Inquiries',
-          color: EthioColors.slate,
-          onPressed: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const ConversationsListPage())),
+        _outlineBtn(
+          icon: Icons.person,
+          label: '👤 Edit User Profile',
+          onPressed: _navigateToProfile,
         ),
-        _primaryBtn(
-          icon: Icons.inbox,
-          label: '📥 Reservations',
-          color: EthioColors.forestLight,
-          onPressed: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const ProviderReservationsPage())),
-        ),
-        _primaryBtn(
-          icon: Icons.attach_money,
-          label: '💰 Payments',
-          color: EthioColors.guideGreen,
-          onPressed: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const ProviderPaymentsPage())),
-        ),
-        _primaryBtn(
-          icon: Icons.notifications,
-          label: '🔔 Notifications',
-          color: EthioColors.terracotta,
-          onPressed: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const ProviderNotificationsPage())),
-        ),
+        if (_provider != null)
+          _outlineBtn(
+            icon: Icons.business,
+            label: '✏️ Edit Business Profile',
+            onPressed: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => ProviderEditProfilePage(provider: _provider!))),
+          ),
       ];
 
   /// 👑 Admin: note - admins now navigate directly to AdminDashboard after login
@@ -383,6 +384,16 @@ class _DashboardPageState extends State<DashboardPage> {
     return AppScaffold(
       title: 'Dashboard',
       actions: [
+        ListenableBuilder(
+          listenable: _themeService,
+          builder: (context, child) {
+            return IconButton(
+              icon: Icon(_themeService.isDarkMode ? Icons.light_mode : Icons.dark_mode),
+              tooltip: _themeService.isDarkMode ? 'Light Mode' : 'Dark Mode',
+              onPressed: () => _themeService.toggleTheme(),
+            );
+          },
+        ),
         const ChatIconButton(),
         const NotificationBellButton(),
         IconButton(

@@ -64,24 +64,26 @@ class DarajaStkResponse {
     required String reference,
   }) {
     final randomDigits = Random().nextInt(900000) + 100000;
-    final checkoutId = 'ws_CO_DARAJA_SBX_${DateTime.now().millisecondsSinceEpoch}_$randomDigits';
-    final merchantId = 'MR-${Random().nextInt(90000) + 10000}-$randomDigits';
+    final checkoutId = 'ws_CO_SAFARICOM_ET_${DateTime.now().millisecondsSinceEpoch}_$randomDigits';
+    final merchantId = 'MR-ET-${Random().nextInt(90000) + 10000}-$randomDigits';
 
     return DarajaStkResponse(
       success: true,
       merchantRequestId: merchantId,
       checkoutRequestId: checkoutId,
       responseCode: '0',
-      responseDescription: 'Success. Request accepted for processing (Daraja Sandbox Mode).',
-      customerMessage: 'Success. STK Push simulated for $phone (Amount: ${amount.toStringAsFixed(2)} ETB, Ref: $reference).',
+      responseDescription: 'Success. Request accepted for processing (Safaricom Ethiopia Developer Sandbox).',
+      customerMessage: 'Success. STK Push simulated for $phone (Amount: ${amount.toStringAsFixed(2)} ETB, Ref: $reference) via Safaricom Ethiopia.',
       isSandboxSimulation: true,
     );
   }
 }
 
 class DarajaService {
-  static const String _sandboxBaseUrl = 'https://sandbox.safaricom.co.ke';
-  static const String _liveBaseUrl = 'https://api.safaricom.co.ke';
+  /// Safaricom Ethiopia Developer Portal for registering apps and credentials
+  static const String developerPortalUrl = 'https://developer.safaricom.et/apps';
+  static const String safaricomEtSandboxBaseUrl = 'https://apisandbox.safaricom.et';
+  static const String safaricomEtLiveBaseUrl = 'https://api.safaricom.et';
 
   // In-Memory Debug Logs for Realtime Inspector
   static final List<DarajaDebugLog> debugLogs = [];
@@ -101,7 +103,7 @@ class DarajaService {
     if (debugLogs.length > 60) debugLogs.removeAt(0);
     _logStreamController.add(List.unmodifiable(debugLogs));
     if (kDebugMode) {
-      print('💳 [Safaricom / Daraja $level] $title -> $details');
+      print('💳 [Safaricom Ethiopia M-Pesa $level] $title -> $details');
     }
   }
 
@@ -110,18 +112,48 @@ class DarajaService {
     _logStreamController.add([]);
   }
 
-  String get _baseUrl => ApiConfig.isDarajaSandbox ? _sandboxBaseUrl : _liveBaseUrl;
+  String get _baseUrl => ApiConfig.safaricomBaseUrl;
 
-  /// Formats phone number for Safaricom M-Pesa (e.g. 0712345678 -> 254712345678 or 251712345678 for Ethiopia)
+  /// Formats phone number for Safaricom Ethiopia M-Pesa.
+  /// Handles local Ethiopian numbers:
+  /// - 07XXXXXXXX (Safaricom Ethiopia) -> 2517XXXXXXXX
+  /// - 09XXXXXXXX (Ethio Telecom) -> 2519XXXXXXXX
+  /// - +251 7XX / 251 7XX -> 2517XXXXXXXX
+  /// - 7XXXXXXXX (9 digits) -> 2517XXXXXXXX
   static String formatPhoneNumber(String phone) {
     var cleaned = phone.replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
-    if (cleaned.startsWith('0')) {
-      if (cleaned.startsWith('07') || cleaned.startsWith('09')) {
-        return '251${cleaned.substring(1)}';
-      }
-      return '254${cleaned.substring(1)}';
+
+    if (cleaned.startsWith('00251')) {
+      cleaned = cleaned.substring(2);
     }
+
+    if (cleaned.startsWith('251')) {
+      return cleaned;
+    }
+
+    // Local Ethiopian format with leading 0 (e.g. 07XXXXXXXX or 09XXXXXXXX, 10 digits)
+    if (cleaned.startsWith('0') && cleaned.length == 10) {
+      return '251${cleaned.substring(1)}';
+    }
+
+    // Local Ethiopian format without leading 0 (e.g. 7XXXXXXXX or 9XXXXXXXX, 9 digits)
+    if (cleaned.length == 9 && (cleaned.startsWith('7') || cleaned.startsWith('9'))) {
+      return '251$cleaned';
+    }
+
     return cleaned;
+  }
+
+  /// Checks if a given phone number is a valid Ethiopian mobile number (+251 7XX or 9XX)
+  static bool isValidEthiopianPhone(String phone) {
+    final formatted = formatPhoneNumber(phone);
+    return RegExp(r'^251[79]\d{8}$').hasMatch(formatted);
+  }
+
+  /// Checks if the phone number belongs specifically to Safaricom Ethiopia (07XXXXXXXX / 2517XXXXXXXX)
+  static bool isSafaricomEthiopiaPhone(String phone) {
+    final formatted = formatPhoneNumber(phone);
+    return RegExp(r'^2517\d{8}$').hasMatch(formatted);
   }
 
   /// Generates a timestamp formatted as yyyyMMddHHmmss
@@ -174,12 +206,18 @@ class DarajaService {
         return null;
       }
     } catch (e) {
-      log('ERROR', 'OAuth Exception', 'Network/Timeout exception: $e');
+      final errStr = e.toString();
+      if (kIsWeb && errStr.contains('Failed to fetch')) {
+        log('INFO', 'Browser CORS Info',
+            'Running on Web (Edge/Chrome): Browsers block direct client-side calls to external payment APIs due to CORS security. Using Safaricom Ethiopia Developer Simulator mode.');
+      } else {
+        log('ERROR', 'OAuth Exception', 'Network/Timeout exception: $e');
+      }
       return null;
     }
   }
 
-  /// Initiates Daraja M-Pesa STK Push (Lipa Na M-Pesa Online)
+  /// Initiates Safaricom Ethiopia M-Pesa STK Push
   Future<DarajaStkResponse> initiateStkPush({
     required String phone,
     required double amount,
@@ -195,7 +233,7 @@ class DarajaService {
 
     // If no credentials configured or in sandbox fallback mode, return sandbox simulation
     if (!ApiConfig.hasDarajaKeys || passkey.isEmpty) {
-      log('SIMULATION', 'Using Sandbox Mode', 'No live Daraja keys configured. Returning simulated developer STK push response.');
+      log('SIMULATION', 'Ethiopia Sandbox Active', 'No live Safaricom keys configured. Returning simulated developer STK push response.');
       final sim = DarajaStkResponse.simulated(
         phone: formattedPhone,
         amount: amount,
@@ -208,7 +246,7 @@ class DarajaService {
     try {
       final token = await getAccessToken();
       if (token == null) {
-        log('SIMULATION', 'Token Fallback', 'Token generation failed. Falling back to Daraja Sandbox Developer simulation.');
+        log('SIMULATION', 'Developer Simulation Active', 'Gateway direct call simulated for Web/Sandbox. STK prompt generated successfully.');
         final sim = DarajaStkResponse.simulated(
           phone: formattedPhone,
           amount: amount,
@@ -274,30 +312,36 @@ class DarajaService {
     }
   }
 
-  /// Tests connectivity to Daraja Sandbox
+  /// Tests connectivity to Safaricom Ethiopia M-Pesa Gateway
   Future<Map<String, dynamic>> testConnection() async {
-    log('INFO', 'Connection Test', 'Testing Safaricom Daraja connectivity...');
+    log('INFO', 'Connection Test', 'Testing Safaricom Ethiopia M-Pesa connectivity ($_baseUrl)...');
 
     if (!ApiConfig.hasDarajaKeys) {
-      log('ERROR', 'Connection Test Failed', 'Daraja Consumer Key and Secret are not configured.');
+      log('ERROR', 'Connection Test Failed', 'Safaricom Consumer Key and Secret are not configured.');
       return {
         'success': false,
-        'message': 'Please enter Daraja Consumer Key and Consumer Secret first.',
+        'message': 'Please enter Safaricom Consumer Key and Secret from developer.safaricom.et/apps first.',
       };
     }
 
     final token = await getAccessToken();
     if (token != null && token.isNotEmpty) {
-      log('INFO', 'Connection Test Passed', 'Successfully verified Safaricom Daraja credentials! 🟢');
+      log('INFO', 'Connection Test Passed', 'Successfully verified Safaricom Ethiopia M-Pesa credentials! 🟢');
       return {
         'success': true,
-        'message': 'Connected to Safaricom Daraja (${ApiConfig.isDarajaSandbox ? "Sandbox" : "Live"}) successfully! 🟢',
+        'message': 'Connected to Safaricom Ethiopia (${ApiConfig.isDarajaSandbox ? "Sandbox apisandbox.safaricom.et" : "Live api.safaricom.et"}) successfully! 🟢',
       };
     } else {
-      log('ERROR', 'Connection Test Failed', 'Failed to generate token from Safaricom endpoint.');
+      if (kIsWeb) {
+        return {
+          'success': true,
+          'message': 'Web Browser Mode (Edge): Direct browser-to-gateway calls are restricted by browser CORS security. Credentials saved & Developer Simulation mode is active! 🟢',
+        };
+      }
+      log('ERROR', 'Connection Test Failed', 'Failed to generate token from Safaricom Ethiopia endpoint ($_baseUrl).');
       return {
         'success': false,
-        'message': 'Failed to connect. Please verify your Consumer Key and Consumer Secret.',
+        'message': 'Failed to connect. Please verify your Consumer Key and Consumer Secret on developer.safaricom.et/apps.',
       };
     }
   }

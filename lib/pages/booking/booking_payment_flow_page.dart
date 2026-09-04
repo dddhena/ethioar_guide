@@ -8,7 +8,6 @@ import '../../services/auth_service.dart';
 import '../../services/daraja_service.dart';
 import '../../services/payment_service.dart';
 import '../../services/service_provider_service.dart';
-import '../../widgets/api_gateway_settings_modal.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/snackbar_helper.dart';
 import '../providers/my_reservations_page.dart';
@@ -67,7 +66,7 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
       _touristNameCtrl.text = user.displayName ?? '';
       _touristEmailCtrl.text = user.email ?? '';
     }
-    _paymentPhoneCtrl.text = '0712345678'; // Default Safaricom test prefix
+    _paymentPhoneCtrl.text = '0770000000'; // Safaricom Ethiopia test prefix
   }
 
   @override
@@ -107,10 +106,15 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
       return;
     }
 
+    if (_selectedMethod == 'daraja_mpesa' && !DarajaService.isValidEthiopianPhone(phone)) {
+      SnackbarHelper.show(context, 'Please enter a valid Ethiopian mobile number (07XXXXXXXX or +251 7...).');
+      return;
+    }
+
     setState(() {
       _currentStep = 3;
       _processingStatusText = _selectedMethod == 'daraja_mpesa'
-          ? 'Connecting to Safaricom Daraja ${ApiConfig.isDarajaSandbox ? "Sandbox" : "Live"} Gateway...'
+          ? 'Connecting to Safaricom Ethiopia M-Pesa ${ApiConfig.isDarajaSandbox ? "Sandbox" : "Live"} Gateway...'
           : _selectedMethod == 'telebirr'
               ? 'Connecting to Telebirr Developer ${ApiConfig.isTelebirrSandbox ? "Sandbox" : "Live"} Gateway...'
               : 'Connecting to Payment Gateway...';
@@ -130,13 +134,13 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
         if (!mounted) return;
         setState(() {
           _processingStatusText = darajaRes.isSandboxSimulation
-              ? 'Daraja Sandbox: STK Push sent to $phone! Enter PIN on phone...'
-              : 'Safaricom STK Push sent to $phone! Enter PIN on phone...';
+              ? 'Safaricom Ethiopia Sandbox: STK Push sent to $phone! Enter PIN on phone...'
+              : 'Safaricom Ethiopia STK Push sent to $phone! Enter PIN on phone...';
         });
 
-        // Show simulated STK PIN popup for Daraja M-Pesa
+        // Show simulated STK PIN popup for Safaricom Ethiopia M-Pesa
         final authorized = await _showStkPinSimulationDialog(
-          title: 'Safaricom M-Pesa PIN',
+          title: 'Safaricom Ethiopia M-Pesa PIN',
           subtitle: 'STK Push (Ref: ${darajaRes.checkoutRequestId})',
           isDaraja: true,
         );
@@ -675,40 +679,20 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Select Payment Gateway', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              TextButton.icon(
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.teal.shade800,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                ),
-                onPressed: () async {
-                  await ApiGatewaySettingsModal.show(
-                    context,
-                    initialTabIndex: _selectedMethod == 'telebirr' ? 2 : 1,
-                  );
-                  if (mounted) setState(() {});
-                },
-                icon: const Icon(Icons.settings, size: 16),
-                label: const Text('API & Sandbox Config', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
+          const Text('Select Payment Gateway', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 4),
           Text('Supported Ethiopian mobile wallets and payment gateways:', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
           const SizedBox(height: 14),
 
-          // 1. Safaricom Daraja M-Pesa
+          // 1. Safaricom Ethiopia M-Pesa
           _paymentMethodTile(
             id: 'daraja_mpesa',
-            title: 'Safaricom M-Pesa (Daraja STK)',
-            subtitle: 'Instant STK Push on Safaricom Ethiopia',
+            title: 'Safaricom M-Pesa Ethiopia',
+            subtitle: 'Instant STK Push for 07XXXXXXXX',
             icon: Icons.flash_on,
             iconColor: Colors.green.shade700,
             bgColor: Colors.green.shade50,
-            badge: isDarajaSandbox ? '🟢 Daraja Sandbox' : '🟢 Live',
+            badge: isDarajaSandbox ? '🟢 Safaricom ET Sandbox' : '🟢 Live',
           ),
 
           // 2. Telebirr
@@ -751,7 +735,7 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
               children: [
                 Text(
                   _selectedMethod == 'daraja_mpesa'
-                      ? 'Safaricom Phone Number for STK Push:'
+                      ? 'Safaricom Ethiopia Phone for STK Push:'
                       : 'Mobile Number for ${_selectedMethod == 'telebirr' ? 'Telebirr' : 'CBE Birr'}:',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
@@ -769,7 +753,7 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
                         const Icon(Icons.flash_on, size: 12, color: Colors.green),
                         const SizedBox(width: 4),
                         Text(
-                          ApiConfig.isDarajaSandbox ? 'Sandbox Test Mode' : 'Live Gateway',
+                          ApiConfig.isDarajaSandbox ? 'Safaricom ET Sandbox' : 'Live Gateway',
                           style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green.shade900),
                         ),
                       ],
@@ -783,9 +767,11 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.phone_android),
-                hintText: _selectedMethod == 'daraja_mpesa' ? '07XXXXXXXX or 2517XXXXXXXX' : '09XXXXXXXX',
+                hintText: _selectedMethod == 'daraja_mpesa' ? '07XXXXXXXX or +251 7...' : '09XXXXXXXX',
                 border: const OutlineInputBorder(),
-                helperText: 'You will receive an instant push prompt to enter your PIN',
+                helperText: _selectedMethod == 'daraja_mpesa'
+                    ? 'Enter Ethiopian Safaricom phone (07...); you will receive an instant STK prompt'
+                    : 'You will receive an instant push prompt to enter your PIN',
               ),
             ),
             if (_selectedMethod == 'daraja_mpesa') ...[
@@ -797,9 +783,9 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
                     spacing: 6,
                     children: [
                       ActionChip(
-                        label: const Text('0712345678', style: TextStyle(fontSize: 11)),
+                        label: const Text('0770000000', style: TextStyle(fontSize: 11)),
                         backgroundColor: Colors.green.shade50,
-                        onPressed: () => setState(() => _paymentPhoneCtrl.text = '0712345678'),
+                        onPressed: () => setState(() => _paymentPhoneCtrl.text = '0770000000'),
                       ),
                       ActionChip(
                         label: const Text('251700000000', style: TextStyle(fontSize: 11)),
@@ -807,9 +793,9 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
                         onPressed: () => setState(() => _paymentPhoneCtrl.text = '251700000000'),
                       ),
                       ActionChip(
-                        label: const Text('254708374149', style: TextStyle(fontSize: 11)),
+                        label: const Text('0712345678', style: TextStyle(fontSize: 11)),
                         backgroundColor: Colors.green.shade50,
-                        onPressed: () => setState(() => _paymentPhoneCtrl.text = '254708374149'),
+                        onPressed: () => setState(() => _paymentPhoneCtrl.text = '0712345678'),
                       ),
                     ],
                   ),
@@ -1111,7 +1097,7 @@ class _BookingPaymentFlowPageState extends State<BookingPaymentFlowPage> {
                   const Divider(height: 20),
                   _summaryRow('Transaction ID', _transactionId),
                   if (_createdPaymentId.isNotEmpty) _summaryRow('Payment ID', _createdPaymentId),
-                  _summaryRow('Method', _selectedMethod == 'daraja_mpesa' ? 'Safaricom M-Pesa (Daraja)' : _selectedMethod.toUpperCase()),
+                  _summaryRow('Method', _selectedMethod == 'daraja_mpesa' ? 'Safaricom M-Pesa Ethiopia' : _selectedMethod.toUpperCase()),
                   _summaryRow('Amount Paid', '${_calculatedTotal.toStringAsFixed(2)} ETB'),
                   _summaryRow('Status', 'PAID / COMPLETED'),
                   _summaryRow('Reservation Status', 'Pending Provider Acceptance'),

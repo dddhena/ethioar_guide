@@ -14,10 +14,8 @@ import '../services/trip_service.dart';
 import '../services/weather_service.dart';
 import '../theme/ethio_theme.dart';
 import '../widgets/add_to_trip_sheet.dart';
-import '../widgets/api_gateway_settings_modal.dart';
 import '../widgets/notification_bell_button.dart';
 import '../widgets/place_image.dart';
-import 'create_trip_page.dart';
 import 'landmark_detail_page.dart';
 import 'trips_page.dart';
 
@@ -570,11 +568,6 @@ class _AiGuidePageState extends State<AiGuidePage> {
     );
   }
 
-  Future<void> _showApiKeyDialog() async {
-    await ApiGatewaySettingsModal.show(context, initialTabIndex: 0);
-    if (mounted) setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -597,14 +590,14 @@ class _AiGuidePageState extends State<AiGuidePage> {
             tooltip: 'Saved Conversations',
             onPressed: _showSavedConversationsSheet,
           ),
-          IconButton(
-            icon: Icon(
-              ApiConfig.hasGeminiKey ? Icons.bolt : Icons.vpn_key_outlined,
-              color: ApiConfig.hasGeminiKey ? Colors.amber.shade700 : EthioColors.charcoal,
+          if (ApiConfig.hasGeminiKey)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6.0),
+              child: Tooltip(
+                message: 'Gemini AI Online',
+                child: Icon(Icons.bolt, color: Colors.amber.shade700, size: 22),
+              ),
             ),
-            tooltip: ApiConfig.hasGeminiKey ? 'Gemini AI Connected' : 'Configure Gemini API Key',
-            onPressed: _showApiKeyDialog,
-          ),
           const NotificationBellButton(color: EthioColors.charcoal),
         ],
       ),
@@ -677,45 +670,41 @@ class _AiGuidePageState extends State<AiGuidePage> {
               ],
             ),
           ),
-          InkWell(
-            onTap: _showApiKeyDialog,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: ApiConfig.hasGeminiKey
+                  ? Colors.amber.shade50
+                  : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
                 color: ApiConfig.hasGeminiKey
-                    ? Colors.amber.shade50
-                    : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: ApiConfig.hasGeminiKey
-                      ? Colors.amber.shade400
-                      : Colors.grey.shade300,
-                ),
+                    ? Colors.amber.shade400
+                    : Colors.grey.shade300,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    ApiConfig.hasGeminiKey ? Icons.bolt : Icons.key_outlined,
-                    size: 13,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  ApiConfig.hasGeminiKey ? Icons.bolt : Icons.auto_awesome,
+                  size: 13,
+                  color: ApiConfig.hasGeminiKey
+                      ? Colors.amber.shade900
+                      : Colors.grey.shade700,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  ApiConfig.hasGeminiKey ? 'Gemini Live' : 'AI Guide',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
                     color: ApiConfig.hasGeminiKey
                         ? Colors.amber.shade900
                         : Colors.grey.shade700,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    ApiConfig.hasGeminiKey ? 'Gemini Live' : 'Set Key',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: ApiConfig.hasGeminiKey
-                          ? Colors.amber.shade900
-                          : Colors.grey.shade700,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

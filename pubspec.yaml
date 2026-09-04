@@ -50,6 +50,7 @@ dependencies:
   google_generative_ai: ^0.4.6
   firebase_storage: ^13.0.0
   image_picker: ^1.1.2
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:
