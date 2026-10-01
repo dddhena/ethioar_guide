@@ -14,6 +14,7 @@ import '../providers/admin_providers_page.dart';
 import '../chat/conversations_list_page.dart';
 import '../landmarks_page.dart';
 import '../login_page.dart';
+import '../../services/theme_service.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -27,6 +28,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final FirestoreService _fs = FirestoreService();
   final EmergencyService _emergencyService = EmergencyService();
   final PaymentService _paymentService = PaymentService();
+  final ThemeService _themeService = ThemeService();
+
+  bool get _isDark => _themeService.isDarkMode;
+  Color get _contentBg => _isDark ? const Color(0xFF121212) : Colors.grey.shade50;
+  Color get _cardBg => _isDark ? const Color(0xFF1E1E1E) : Colors.white;
+  Color get _cardSubBg => _isDark ? const Color(0xFF282828) : Colors.grey.shade50;
+  Color get _textPrimary => _isDark ? Colors.white : Colors.black87;
+  Color get _textSecondary => _isDark ? Colors.white70 : Colors.grey.shade600;
   
   int _selectedIndex = 0;
   bool _sidebarExpanded = true;
@@ -97,17 +106,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
   
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Row(
-        children: [
-          // Sidebar
-          _buildSidebar(),
-          // Main content
-          Expanded(
-            child: _buildMainContent(),
+    return ListenableBuilder(
+      listenable: _themeService,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: _contentBg,
+          body: Row(
+            children: [
+              // Sidebar: STRICTLY DARK GREEN PRESERVED (Not affected by light/dark theme)
+              _buildSidebar(),
+              // Main content: Fully Theme-Adaptive
+              Expanded(
+                child: _buildMainContent(),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -118,7 +133,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         color: const Color(0xFF1B4D3E), // Dark green
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(2, 0),
           ),
@@ -309,9 +324,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.2),
+        color: Colors.black.withValues(alpha: 0.2),
         border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.1)),
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
         ),
       ),
       child: _sidebarExpanded
@@ -432,7 +447,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildMainContent() {
     return Container(
-      color: Colors.grey.shade50,
+      color: _contentBg,
       child: Column(
         children: [
           // Top navigation bar
@@ -450,10 +465,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -462,7 +477,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.menu),
+            icon: Icon(Icons.menu, color: _textPrimary),
             onPressed: () {
               setState(() {
                 _sidebarExpanded = !_sidebarExpanded;
@@ -472,10 +487,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
           const SizedBox(width: 16),
           Text(
             _getPageTitle(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: _textPrimary,
             ),
           ),
           const Spacer(),
@@ -484,25 +499,37 @@ class _AdminDashboardState extends State<AdminDashboard> {
             width: 300,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: _cardSubBg,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const TextField(
+            child: TextField(
+              style: TextStyle(color: _textPrimary, fontSize: 13),
               decoration: InputDecoration(
                 hintText: 'Search...',
-                prefixIcon: Icon(Icons.search, color: Colors.grey),
+                hintStyle: TextStyle(color: _isDark ? Colors.white38 : Colors.grey),
+                prefixIcon: Icon(Icons.search, color: _isDark ? Colors.white54 : Colors.grey),
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
+          // Theme Toggle Button
           IconButton(
-            icon: const Icon(Icons.message_outlined),
+            icon: Icon(
+              _isDark ? Icons.light_mode : Icons.dark_mode,
+              color: _isDark ? Colors.amber : Colors.grey.shade700,
+            ),
+            tooltip: _isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+            onPressed: () => _themeService.toggleTheme(),
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            icon: Icon(Icons.message_outlined, color: _isDark ? Colors.white70 : Colors.black54),
             onPressed: () => _navigateToPage(7),
           ),
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            icon: Icon(Icons.notifications_outlined, color: _isDark ? Colors.white70 : Colors.black54),
             onPressed: () {},
           ),
           const SizedBox(width: 8),
@@ -740,7 +767,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -790,11 +817,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -809,7 +836,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -839,15 +866,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Text(
             title,
             style: TextStyle(
-              color: Colors.grey.shade600,
+              color: _textSecondary,
               fontSize: 14,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.black87,
+            style: TextStyle(
+              color: _textPrimary,
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
@@ -861,11 +888,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -877,11 +904,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Platform Overview',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: _textPrimary,
                 ),
               ),
               Row(
@@ -889,17 +917,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      color: _cardSubBg,
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Text(
+                    child: Text(
                       'This Month',
-                      style: TextStyle(fontSize: 12),
+                      style: TextStyle(fontSize: 12, color: _textPrimary),
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.refresh, size: 16),
+                    icon: Icon(Icons.refresh, size: 16, color: _textPrimary),
                     onPressed: _loadStatistics,
                     tooltip: 'Refresh',
                   ),
@@ -914,7 +942,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             Container(
               height: 200,
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: _cardSubBg,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Center(
@@ -929,7 +957,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     const SizedBox(height: 8),
                     Text(
                       'Users: $_totalUsers | Bookings: ${_bookingStats['total'] ?? 0} | Payments: ${_entrancePayments.toStringAsFixed(0)} ETB',
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: TextStyle(color: _textSecondary),
                     ),
                   ],
                 ),
@@ -944,11 +972,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -957,11 +985,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Bookings by Status',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
+              color: _textPrimary,
             ),
           ),
           const SizedBox(height: 20),
@@ -971,7 +1000,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             Container(
               height: 200,
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: _cardSubBg,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Center(
@@ -1008,7 +1037,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     else
                       Text(
                         'No booking data available',
-                        style: TextStyle(color: Colors.grey.shade600),
+                        style: TextStyle(color: _textSecondary),
                       ),
                   ],
                 ),
@@ -1023,11 +1052,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1036,11 +1065,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Recent Alerts',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
+              color: _textPrimary,
             ),
           ),
           const SizedBox(height: 16),
@@ -1112,15 +1142,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
+                    color: _textPrimary,
                   ),
                 ),
                 Text(
                   description,
                   style: TextStyle(
-                    color: Colors.grey.shade600,
+                    color: _textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -1136,11 +1167,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1149,11 +1180,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Quick Actions',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
+              color: _textPrimary,
             ),
           ),
           const SizedBox(height: 16),
@@ -1193,11 +1225,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1209,17 +1241,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Recent Bookings',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: _textPrimary,
                 ),
               ),
               if (!_loadingStats)
                 TextButton.icon(
-                  icon: const Icon(Icons.refresh, size: 16),
-                  label: const Text('Refresh'),
+                  icon: Icon(Icons.refresh, size: 16, color: _textPrimary),
+                  label: Text('Refresh', style: TextStyle(color: _textPrimary)),
                   onPressed: _loadStatistics,
                 ),
             ],
@@ -1233,11 +1266,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   children: [
-                    Icon(Icons.inbox_outlined, size: 48, color: Colors.grey.shade400),
+                    Icon(Icons.inbox_outlined, size: 48, color: _textSecondary),
                     const SizedBox(height: 12),
                     Text(
                       'No recent bookings',
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: TextStyle(color: _textSecondary),
                     ),
                   ],
                 ),
@@ -1247,13 +1280,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Booking ID')),
-                  DataColumn(label: Text('User')),
-                  DataColumn(label: Text('Service')),
-                  DataColumn(label: Text('Date')),
-                  DataColumn(label: Text('Status')),
-                  DataColumn(label: Text('Amount')),
+                columns: [
+                  DataColumn(label: Text('Booking ID', style: TextStyle(color: _textPrimary))),
+                  DataColumn(label: Text('User', style: TextStyle(color: _textPrimary))),
+                  DataColumn(label: Text('Service', style: TextStyle(color: _textPrimary))),
+                  DataColumn(label: Text('Date', style: TextStyle(color: _textPrimary))),
+                  DataColumn(label: Text('Status', style: TextStyle(color: _textPrimary))),
+                  DataColumn(label: Text('Amount', style: TextStyle(color: _textPrimary))),
                 ],
                 rows: _recentBookings.map((booking) {
                   final bookingId = booking['id'] as String? ?? 'Unknown';
@@ -1299,19 +1332,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     return DataRow(
       cells: [
-        DataCell(Text(id)),
-        DataCell(Text(user)),
-        DataCell(Text(service)),
-        DataCell(Text(date)),
+        DataCell(Text(id, style: TextStyle(color: _textPrimary))),
+        DataCell(Text(user, style: TextStyle(color: _textPrimary))),
+        DataCell(Text(service, style: TextStyle(color: _textPrimary))),
+        DataCell(Text(date, style: TextStyle(color: _textPrimary))),
         DataCell(
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
+              color: statusColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              status,
+              status.toUpperCase(),
               style: TextStyle(
                 color: statusColor,
                 fontWeight: FontWeight.bold,
@@ -1320,7 +1353,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           ),
         ),
-        DataCell(Text(amount)),
+        DataCell(Text(amount, style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold))),
       ],
     );
   }
@@ -1329,11 +1362,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1342,11 +1375,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Recent Activities',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
+              color: _textPrimary,
             ),
           ),
           const SizedBox(height: 16),
@@ -1401,10 +1435,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: EthioColors.forest.withOpacity(0.1),
+              color: EthioColors.forest.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.check_circle,
               color: EthioColors.forest,
               size: 20,
@@ -1417,15 +1451,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
+                    color: _textPrimary,
                   ),
                 ),
                 Text(
                   description,
                   style: TextStyle(
-                    color: Colors.grey.shade600,
+                    color: _textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -1435,7 +1470,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Text(
             time,
             style: TextStyle(
-              color: Colors.grey.shade400,
+              color: _textSecondary,
               fontSize: 11,
             ),
           ),

@@ -170,7 +170,7 @@ class _ConversationsListPageState extends State<ConversationsListPage> {
                 return ListView.separated(
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final c = filtered[index];
                     final otherId = c.getOtherUserId(user.uid);

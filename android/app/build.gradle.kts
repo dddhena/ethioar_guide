@@ -46,3 +46,7 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+configurations.all {
+    exclude(group = "com.android.support")
+}

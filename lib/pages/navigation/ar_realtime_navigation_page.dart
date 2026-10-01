@@ -51,7 +51,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
 
   bool _isRecalculating = false;
   bool _hasArrived = false;
-  bool _showMiniMap = true;
+  final bool _showMiniMap = true;
   bool _isExpandedMap = false;
 
   late AnimationController _arPulseController;
@@ -390,7 +390,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.82),
+        color: Colors.black.withValues(alpha: 0.82),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white24, width: 1),
         boxShadow: const [
@@ -446,7 +446,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: EthioColors.forestLight.withOpacity(0.3),
+                  color: EthioColors.forestLight.withValues(alpha: 0.3),
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.greenAccent),
                 ),
@@ -562,7 +562,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
+                    color: Colors.black.withValues(alpha: 0.6),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -588,7 +588,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.75),
+            color: Colors.black.withValues(alpha: 0.75),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white24),
           ),
@@ -662,7 +662,7 @@ class _ArPerspectiveOverlayPainter extends CustomPainter {
       begin: Alignment.bottomCenter,
       end: Alignment.topCenter,
       colors: [
-        (travelMode == TravelMode.driving ? Colors.greenAccent : Colors.amberAccent).withOpacity(0.35 + pulse * 0.15),
+        (travelMode == TravelMode.driving ? Colors.greenAccent : Colors.amberAccent).withValues(alpha: 0.35 + pulse * 0.15),
         Colors.transparent,
       ],
     );
@@ -684,7 +684,7 @@ class _ArPerspectiveOverlayPainter extends CustomPainter {
       chevronPath.lineTo(centerX + curW, curY + 10 * scale);
 
       final chevronPaint = Paint()
-        ..color = Colors.white.withOpacity(1.0 - t * 0.6)
+        ..color = Colors.white.withValues(alpha: 1.0 - t * 0.6)
         ..strokeWidth = 5.0 * scale
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
@@ -696,12 +696,12 @@ class _ArPerspectiveOverlayPainter extends CustomPainter {
     final markerCenter = Offset(centerX, size.height * 0.42);
 
     final ringPaint = Paint()
-      ..color = Colors.amberAccent.withOpacity(0.8)
+      ..color = Colors.amberAccent.withValues(alpha: 0.8)
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke;
     canvas.drawCircle(markerCenter, 32 + pulse * 4, ringPaint);
 
-    final bgPaint = Paint()..color = Colors.black.withOpacity(0.75);
+    final bgPaint = Paint()..color = Colors.black.withValues(alpha: 0.75);
     canvas.drawCircle(markerCenter, 28, bgPaint);
 
     // Directional Text / Arrow in center

@@ -231,7 +231,7 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
+            color: Colors.blue.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -492,14 +492,14 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
         _popularAttractions
             .where((r) => r.landmark.category.toLowerCase() == category)
             .toList(),
-        '🔥 Trending ${category} destinations',
+        '🔥 Trending $category destinations',
       );
     }
 
     return _buildRecommendationSection(
       '${category.capitalize()} Destinations',
       categoryRecommendations,
-      '✨ Best ${category} experiences',
+      '✨ Best $category experiences',
     );
   }
 
@@ -610,7 +610,7 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
                   gradient: LinearGradient(
                     colors: [
                       _getCategoryColor(landmark.category),
-                      _getCategoryColor(landmark.category).withOpacity(0.7),
+                      _getCategoryColor(landmark.category).withValues(alpha: 0.7),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,

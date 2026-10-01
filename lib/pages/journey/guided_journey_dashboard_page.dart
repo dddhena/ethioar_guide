@@ -10,25 +10,21 @@ import '../../widgets/journey/dashboard_widgets.dart';
 import '../../widgets/journey/recommended_places_section.dart';
 import '../../widgets/notification_bell_button.dart';
 import '../ai_guide_page.dart';
-import '../camera_preview.dart';
 import '../chat/conversations_list_page.dart';
 import '../dashboard_page.dart';
 import '../emergency/emergency_sos_dialog.dart';
 import '../explore_page.dart';
-import '../favorites_page.dart';
 import '../guides/guides_list_page.dart';
 import '../guides/my_guide_bookings_page.dart';
-import '../landmarks_page.dart';
 import '../login_page.dart';
-import '../nearby_landmarks_page.dart';
 import '../profile_page.dart';
 import '../providers/my_reservations_page.dart';
-import '../providers/service_providers_list_page.dart';
 import '../trips_page.dart';
 import 'ar_discovery_dashboard_page.dart';
 import 'choose_journey_page.dart';
 import 'guided_tours_browse_page.dart';
 import '../navigation/route_preview_page.dart';
+import '../../services/theme_service.dart';
 
 class GuidedJourneyDashboardPage extends StatefulWidget {
   const GuidedJourneyDashboardPage({super.key});
@@ -40,6 +36,7 @@ class GuidedJourneyDashboardPage extends StatefulWidget {
 class _GuidedJourneyDashboardPageState extends State<GuidedJourneyDashboardPage> {
   final _auth = AuthService();
   final _fs = FirestoreService();
+  final ThemeService _themeService = ThemeService();
   UserProfile _profile = UserProfile(uid: '', name: 'Guest', email: '', role: 'tourist');
   bool _loading = true;
   int _navIndex = 0;
@@ -236,45 +233,59 @@ class _GuidedJourneyDashboardPageState extends State<GuidedJourneyDashboardPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: EthioColors.cream,
-      drawer: _buildDrawer(),
-      appBar: AppBar(
-        title: const Text('Guided Journey'),
-        actions: [
-          const EmergencySosButton(),
-          const ChatIconButton(color: EthioColors.charcoal),
-          const NotificationBellButton(color: EthioColors.charcoal),
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            tooltip: 'Profile',
-            onPressed: () => _push(const ProfilePage()),
+    return ListenableBuilder(
+      listenable: _themeService,
+      builder: (context, _) {
+        final isDark = _themeService.isDarkMode;
+        return Scaffold(
+          backgroundColor: isDark ? const Color(0xFF121212) : EthioColors.cream,
+          drawer: _buildDrawer(),
+          appBar: AppBar(
+            title: const Text('Guided Journey'),
+            actions: [
+              IconButton(
+                icon: Icon(
+                  isDark ? Icons.light_mode : Icons.dark_mode,
+                  color: isDark ? Colors.amber : EthioColors.charcoal,
+                ),
+                tooltip: isDark ? 'Light Mode' : 'Dark Mode',
+                onPressed: () => _themeService.toggleTheme(),
+              ),
+              const EmergencySosButton(),
+              ChatIconButton(color: isDark ? Colors.white70 : EthioColors.charcoal),
+              NotificationBellButton(color: isDark ? Colors.white70 : EthioColors.charcoal),
+              IconButton(
+                icon: const Icon(Icons.person_outline),
+                tooltip: 'Profile',
+                onPressed: () => _push(const ProfilePage()),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _buildHomeTab(),
+          body: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _buildHomeTab(),
+              ),
+            ),
           ),
-        ),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _navIndex,
-        onDestinationSelected: _onNavTap,
-        backgroundColor: Colors.white,
-        indicatorColor: EthioColors.forest.withValues(alpha: 0.12),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore), label: 'Explore'),
-          NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month), label: 'Trips'),
-          NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: 'AI Guide'),
-          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
-        ],
-      ),
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: _navIndex,
+            onDestinationSelected: _onNavTap,
+            backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+            indicatorColor: EthioColors.forest.withValues(alpha: 0.12),
+            destinations: const [
+              NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
+              NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore), label: 'Explore'),
+              NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month), label: 'Trips'),
+              NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: 'AI Guide'),
+              NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+            ],
+          ),
+        );
+      },
     );
   }
 

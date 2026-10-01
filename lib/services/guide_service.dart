@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/guide.dart';
+import '../models/guide_profile.dart';
 import '../models/tour_package.dart';
 import '../models/booking.dart';
 import '../models/user_profile.dart';
-import '../models/payment.dart';
 import 'notification_service.dart';
 import 'chat_service.dart';
 
@@ -359,6 +359,59 @@ class GuideService {
       }
     } catch (_) {}
     return null;
+  }
+
+  // ==========================================
+  // GUIDE PROFILES (NEW ONBOARDING SYSTEM)
+  // ==========================================
+
+  Future<GuideProfile?> getGuideProfile(String userId) async {
+    try {
+      final doc = await _db.collection('guideProfiles').doc(userId).get();
+      if (doc.exists && doc.data() != null) {
+        return GuideProfile.fromFirestore(doc);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<bool> hasCompletedGuideProfile(String userId) async {
+    final profile = await getGuideProfile(userId);
+    return profile?.profileCompleted ?? false;
+  }
+
+  Future<void> createGuideProfileDocument(GuideProfile profile) async {
+    await _db.collection('guideProfiles').doc(profile.userId).set(profile.toMap());
+  }
+
+  Future<void> updateGuideProfileDocument(GuideProfile profile) async {
+    await _db.collection('guideProfiles').doc(profile.userId).update(profile.toMap());
+  }
+
+  Future<List<GuideProfile>> fetchCompletedGuideProfiles() async {
+    try {
+      final snapshot = await _db
+          .collection('guideProfiles')
+          .where('profileCompleted', isEqualTo: true)
+          .get();
+      return snapshot.docs
+          .map((d) => GuideProfile.fromFirestore(d))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Stream<List<GuideProfile>> getCompletedGuideProfilesStream() {
+    return _db
+        .collection('guideProfiles')
+        .where('profileCompleted', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((d) => GuideProfile.fromFirestore(d))
+          .toList();
+    }).handleError((_) => []);
   }
 
   static final List<Guide> _demoGuides = [

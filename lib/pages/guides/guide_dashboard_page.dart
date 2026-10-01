@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/guide.dart';
+import '../../models/guide_profile.dart';
 import '../../models/booking.dart';
 import '../../models/tour_package.dart';
 import '../../services/auth_service.dart';
@@ -7,6 +8,7 @@ import '../../services/guide_service.dart';
 import '../../services/theme_service.dart';
 import '../../widgets/notification_bell_button.dart';
 import '../chat/conversations_list_page.dart';
+import 'guide_profile_creation_page.dart';
 
 class GuideDashboardPage extends StatefulWidget {
   const GuideDashboardPage({super.key});
@@ -21,6 +23,7 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
   final ThemeService _themeService = ThemeService();
 
   Guide? _guide;
+  GuideProfile? _guideProfile;
   bool _loading = true;
   String _selectedPeriod = 'This Month';
   int _selectedTabIndex = 0;
@@ -44,31 +47,55 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
   @override
   void initState() {
     super.initState();
+    _checkProfileCompletion();
+  }
+
+  Future<void> _checkProfileCompletion() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      setState(() => _loading = false);
+      return;
+    }
+
+    final hasCompletedProfile = await _guideService.hasCompletedGuideProfile(user.uid);
+    
+    if (!hasCompletedProfile && mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const GuideProfileCreationPage()),
+      );
+      return;
+    }
+
     _loadGuideProfile();
   }
 
   Future<void> _loadGuideProfile() async {
     final user = _auth.currentUser;
-    if (user != null) {
-      final g = await _guideService.getGuideByUserId(user.uid);
-      if (mounted) {
-        setState(() {
-          _guide = g;
-          _loading = false;
+    if (user == null) {
+      setState(() => _loading = false);
+      return;
+    }
+
+    // Load both old Guide model and new GuideProfile
+    final g = await _guideService.getGuideByUserId(user.uid);
+    final profile = await _guideService.getGuideProfile(user.uid);
+    
+    if (mounted) {
+      setState(() {
+        _guide = g;
+        _guideProfile = profile;
+        _loading = false;
+      });
+      // Load dashboard stats
+      if (g != null) {
+        _guideService.getGuideDashboardStatsStream(g.id).listen((stats) {
+          if (mounted) {
+            setState(() {
+              _dashboardStats = stats;
+            });
+          }
         });
-        // Load dashboard stats
-        if (g != null) {
-          _guideService.getGuideDashboardStatsStream(g.id).listen((stats) {
-            if (mounted) {
-              setState(() {
-                _dashboardStats = stats;
-              });
-            }
-          });
-        }
       }
-    } else {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -324,8 +351,8 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              color.withOpacity(0.1),
-              color.withOpacity(0.05),
+              color.withValues(alpha: 0.1),
+              color.withValues(alpha: 0.05),
             ],
           ),
         ),
@@ -337,7 +364,7 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
+                  color: color.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: color, size: 20),
@@ -475,7 +502,7 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
                 ),
               ),
             );
-          }).toList(),
+          }),
       ],
     );
   }
@@ -726,7 +753,7 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, -2),
@@ -776,10 +803,17 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
                 icon: Icons.person,
                 label: 'Profile',
                 isSelected: _selectedTabIndex == 3,
-                onTap: () {
-                  setState(() {
-                    _selectedTabIndex = 3;
-                  });
+                onTap: () async {
+                  final result = await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => GuideProfileCreationPage(
+                        existingProfile: _guideProfile,
+                      ),
+                    ),
+                  );
+                  if (result == true && mounted) {
+                    _loadGuideProfile();
+                  }
                 },
               ),
             ],

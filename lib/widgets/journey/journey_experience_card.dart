@@ -127,7 +127,7 @@ class _HeroImage extends StatelessWidget {
           Image.network(
             url,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _FallbackHero(accent: accent),
+            errorBuilder: (_, _, _) => _FallbackHero(accent: accent),
             loadingBuilder: (context, child, progress) {
               if (progress == null) return child;
               return _FallbackHero(accent: accent, loading: true);

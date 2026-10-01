@@ -63,9 +63,9 @@ class _AiGuidePageState extends State<AiGuidePage> {
   bool _loadingContext = true;
   bool _sending = false;
 
-  String _currentCity = 'Gondar';
-  double _userLat = 12.601;
-  double _userLon = 37.467;
+  String _currentCity = LocationService.currentLocationName;
+  double _userLat = LocationService.currentLatLng.latitude;
+  double _userLon = LocationService.currentLatLng.longitude;
   WeatherData? _currentWeather;
   List<Landmark> _allLandmarks = [];
   List<String> _favoritePlaceNames = [];
@@ -127,22 +127,13 @@ class _AiGuidePageState extends State<AiGuidePage> {
       if (pos != null) {
         _userLat = pos['latitude']!;
         _userLon = pos['longitude']!;
+      } else {
+        _userLat = LocationService.currentLatLng.latitude;
+        _userLon = LocationService.currentLatLng.longitude;
       }
+      _currentCity = LocationService.currentLocationName;
 
       _allLandmarks = await _fs.fetchLandmarks();
-
-      // Find nearest city or landmark
-      if (_allLandmarks.isNotEmpty) {
-        final nearby = LocationService.getNearbyLandmarks(
-          currentLat: _userLat,
-          currentLon: _userLon,
-          landmarks: _allLandmarks,
-          maxRadiusKm: 150,
-        );
-        if (nearby.isNotEmpty && nearby.first.landmark.city.isNotEmpty) {
-          _currentCity = nearby.first.landmark.city;
-        }
-      }
 
       // Fetch Weather
       try {
@@ -453,7 +444,7 @@ class _AiGuidePageState extends State<AiGuidePage> {
                         return ListView.separated(
                           padding: const EdgeInsets.all(16),
                           itemCount: list.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          separatorBuilder: (_, _) => const SizedBox(height: 10),
                           itemBuilder: (context, index) {
                             final item = list[index];
                             final isCurrent = item.id == _currentConversationId;

@@ -224,7 +224,7 @@ class _ProviderQRScannerPageState extends State<ProviderQRScannerPage> with Sing
                         width: 250,
                         height: 250,
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Stack(
@@ -250,7 +250,7 @@ class _ProviderQRScannerPageState extends State<ProviderQRScannerPage> with Sing
                                       color: Colors.redAccent,
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.redAccent.withOpacity(0.8),
+                                          color: Colors.redAccent.withValues(alpha: 0.8),
                                           blurRadius: 8,
                                           spreadRadius: 2,
                                         ),
@@ -539,7 +539,7 @@ class _ProviderQRScannerPageState extends State<ProviderQRScannerPage> with Sing
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: iconColor.withOpacity(0.08),
+                            color: iconColor.withValues(alpha: 0.08),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(icon, size: 72, color: iconColor),

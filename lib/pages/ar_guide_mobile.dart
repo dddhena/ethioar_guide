@@ -11,7 +11,7 @@ import '../services/firestore_service.dart';
 import '../models/landmark.dart';
 
 class ARGuidePage extends StatefulWidget {
-  const ARGuidePage({Key? key}) : super(key: key);
+  const ARGuidePage({super.key});
 
   @override
   State<ARGuidePage> createState() => _ARGuidePageState();

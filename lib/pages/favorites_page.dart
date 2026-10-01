@@ -67,7 +67,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                   : ListView.separated(
                       padding: const EdgeInsets.all(20),
                       itemCount: _favorites.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, i) {
                         final lm = _favorites[i];
                         return _FavoriteCard(

@@ -278,7 +278,7 @@ class _TripsPageState extends State<TripsPage> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: _savedLandmarks.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        separatorBuilder: (_, _) => const SizedBox(width: 12),
                         itemBuilder: (context, i) {
                           final lm = _savedLandmarks[i];
                           return SizedBox(

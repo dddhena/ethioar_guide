@@ -154,7 +154,7 @@ class _RecommendedPlacesSectionState extends State<RecommendedPlacesSection> {
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
             itemCount: _recommendations.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 14),
+            separatorBuilder: (_, _) => const SizedBox(width: 14),
             itemBuilder: (context, index) {
               final rec = _recommendations[index];
               final lm = rec.landmark;

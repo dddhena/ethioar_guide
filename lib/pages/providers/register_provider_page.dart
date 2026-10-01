@@ -213,7 +213,7 @@ class _RegisterProviderPageState extends State<RegisterProviderPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _priceRange,
+                    initialValue: _priceRange,
                     decoration: const InputDecoration(
                       labelText: 'Price Level',
                       prefixIcon: Icon(Icons.attach_money),
