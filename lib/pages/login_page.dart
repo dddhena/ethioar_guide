@@ -7,7 +7,7 @@ import '../widgets/app_scaffold.dart';
 import '../widgets/snackbar_helper.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({Key? key}) : super(key: key);
+  const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();

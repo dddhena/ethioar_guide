@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/guide.dart';
+import '../../models/guide_profile.dart';
 import '../../models/tour_package.dart';
 import '../../models/booking.dart';
 import '../../services/auth_service.dart';
@@ -11,9 +12,10 @@ import '../../widgets/snackbar_helper.dart';
 import '../chat/chat_page.dart';
 
 class GuideDetailsPage extends StatefulWidget {
-  final Guide guide;
+  final Guide? guide;
+  final GuideProfile? profile;
 
-  const GuideDetailsPage({super.key, required this.guide});
+  const GuideDetailsPage({super.key, this.guide, this.profile});
 
   @override
   State<GuideDetailsPage> createState() => _GuideDetailsPageState();
@@ -28,16 +30,37 @@ class _GuideDetailsPageState extends State<GuideDetailsPage> {
   @override
   void initState() {
     super.initState();
-    _loadTours();
+    if (widget.guide != null) {
+      _loadTours();
+    }
   }
 
   Future<void> _loadTours() async {
-    final list = await _guides.fetchToursForGuide(widget.guide.id);
+    if (widget.guide == null) return;
+    final list = await _guides.fetchToursForGuide(widget.guide!.id);
     if (!mounted) return;
     setState(() {
       _tours = list.where((t) => t.isActive).toList();
       _loading = false;
     });
+  }
+
+  String get guideName {
+    if (widget.profile != null) return widget.profile!.publicName;
+    if (widget.guide != null) return widget.guide!.name;
+    return 'Guide';
+  }
+
+  String get guideId {
+    if (widget.guide != null) return widget.guide!.id;
+    if (widget.profile != null) return widget.profile!.userId;
+    return '';
+  }
+
+  String get guideUserId {
+    if (widget.guide != null) return widget.guide!.userId;
+    if (widget.profile != null) return widget.profile!.userId;
+    return '';
   }
 
   Future<void> _messageGuide() async {
@@ -46,13 +69,13 @@ class _GuideDetailsPageState extends State<GuideDetailsPage> {
       SnackbarHelper.show(context, 'Please sign in to message this guide.');
       return;
     }
-    final target = widget.guide.userId.isNotEmpty ? widget.guide.userId : widget.guide.id;
+    final target = guideUserId.isNotEmpty ? guideUserId : guideId;
     final conv = await ChatService().getOrCreateConversation(
       currentUserId: user.uid,
       currentUserName: user.displayName ?? 'Tourist',
       currentUserRole: 'tourist',
       otherUserId: target,
-      otherUserName: widget.guide.name,
+      otherUserName: guideName,
       otherUserRole: 'tour_guide',
       channelType: 'guide_tourist',
     );
@@ -62,7 +85,7 @@ class _GuideDetailsPageState extends State<GuideDetailsPage> {
         builder: (_) => ChatPage(
           chatId: conv.id,
           otherUserId: target,
-          otherUserName: widget.guide.name,
+          otherUserName: guideName,
           otherUserRole: 'tour_guide',
           channelType: 'guide_tourist',
         ),
@@ -150,7 +173,7 @@ class _GuideDetailsPageState extends State<GuideDetailsPage> {
         Booking(
           id: '',
           touristId: user.uid,
-          guideId: widget.guide.id,
+          guideId: guideId,
           tourId: tour.id,
           bookingDate: DateTime.now(),
           tourDate: tourDate,
@@ -160,13 +183,13 @@ class _GuideDetailsPageState extends State<GuideDetailsPage> {
           touristName: profile.name.isNotEmpty ? profile.name : (user.displayName ?? 'Tourist'),
           touristEmail: profile.email.isNotEmpty ? profile.email : (user.email ?? ''),
           touristPhone: profile.phone,
-          guideName: widget.guide.name,
+          guideName: guideName,
           tourName: tour.name,
           notes: notesCtrl.text.trim(),
         ),
       );
       if (!mounted) return;
-      SnackbarHelper.show(context, 'Booking request sent to ${widget.guide.name}');
+      SnackbarHelper.show(context, 'Booking request sent to $guideName');
     } catch (e) {
       if (mounted) SnackbarHelper.show(context, 'Could not send booking: $e');
     }
@@ -174,9 +197,9 @@ class _GuideDetailsPageState extends State<GuideDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final g = widget.guide;
+    final usingProfile = widget.profile != null;
     return AppScaffold(
-      title: g.name,
+      title: guideName,
       actions: [
         IconButton(
           icon: const Icon(Icons.chat_bubble_outline),
@@ -192,59 +215,85 @@ class _GuideDetailsPageState extends State<GuideDetailsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(g.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                  if (usingProfile && widget.profile!.hasPhoto) ...[
+                    Center(
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundImage: NetworkImage(widget.profile!.profileImageUrl!),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  Text(guideName, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
-                  Text('${g.experienceYears} years experience • ${g.formattedPrice}'),
-                  if (g.rating > 0) Text('Rating ${g.rating.toStringAsFixed(1)} (${g.reviewCount} reviews)'),
-                  const SizedBox(height: 10),
-                  Text(g.bio.isEmpty ? 'This guide has not added a bio yet.' : g.bio),
-                  const SizedBox(height: 12),
-                  Text('Languages: ${g.languagesLabel}'),
-                  Text('Qualifications: ${g.qualificationsLabel}'),
-                  const SizedBox(height: 8),
-                  Text('Availability: ${g.availabilitySummary}', style: TextStyle(color: Colors.green.shade800)),
+                  if (usingProfile) ...[
+                    Text('${widget.profile!.experienceLabel} • ${widget.profile!.pricingLabel}'),
+                    if (widget.profile!.rating > 0) 
+                      Text('Rating ${widget.profile!.rating.toStringAsFixed(1)}'),
+                    const SizedBox(height: 10),
+                    Text(widget.profile!.bio.isEmpty ? 'This guide has not added a bio yet.' : widget.profile!.bio),
+                    const SizedBox(height: 12),
+                    Text('Languages: ${widget.profile!.languagesLabel}'),
+                    Text('Specialties: ${widget.profile!.specialtiesLabel}'),
+                    const SizedBox(height: 8),
+                    Text('Services: ${widget.profile!.services.join(", ")}'),
+                    const SizedBox(height: 8),
+                    Text('Availability: ${widget.profile!.availabilityLabel}', style: TextStyle(color: Colors.green.shade800)),
+                  ] else if (widget.guide != null) ...[
+                    Text('${widget.guide!.experienceYears} years experience • ${widget.guide!.formattedPrice}'),
+                    if (widget.guide!.rating > 0) Text('Rating ${widget.guide!.rating.toStringAsFixed(1)} (${widget.guide!.reviewCount} reviews)'),
+                    const SizedBox(height: 10),
+                    Text(widget.guide!.bio.isEmpty ? 'This guide has not added a bio yet.' : widget.guide!.bio),
+                    const SizedBox(height: 12),
+                    Text('Languages: ${widget.guide!.languagesLabel}'),
+                    Text('Qualifications: ${widget.guide!.qualificationsLabel}'),
+                    const SizedBox(height: 8),
+                    Text('Availability: ${widget.guide!.availabilitySummary}', style: TextStyle(color: Colors.green.shade800)),
+                  ],
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          const Text('Tour services', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 8),
-          if (_loading)
-            const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
-          else if (_tours.isEmpty)
-            const Text('This guide has not listed tour services yet.')
-          else
-            ..._tours.map(
-              (t) => Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(t.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      const SizedBox(height: 4),
-                      Text('${t.durationLabel} • ${t.language} • ${t.formattedPrice}'),
-                      if (t.description.isNotEmpty) ...[
+          if (widget.guide != null) ...[
+            const SizedBox(height: 12),
+            const Text('Tour services', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            if (_loading)
+              const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
+            else if (_tours.isEmpty)
+              const Text('This guide has not listed tour services yet.')
+            else
+              ..._tours.map(
+                (t) => Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(t.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        const SizedBox(height: 4),
+                        Text('${t.durationLabel} • ${t.language} • ${t.formattedPrice}'),
+                        if (t.description.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(t.description),
+                        ],
                         const SizedBox(height: 6),
-                        Text(t.description),
-                      ],
-                      const SizedBox(height: 6),
-                      Text('Attractions: ${t.attractionsLabel}', style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
-                      const SizedBox(height: 10),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: ElevatedButton(
-                          onPressed: () => _bookTour(t),
-                          child: const Text('Request booking'),
+                        Text('Attractions: ${t.attractionsLabel}', style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: ElevatedButton(
+                            onPressed: () => _bookTour(t),
+                            child: const Text('Request booking'),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
+          ],
         ],
       ),
     );

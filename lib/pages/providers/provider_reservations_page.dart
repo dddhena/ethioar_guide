@@ -257,7 +257,6 @@ class _ProviderReservationsPageState extends State<ProviderReservationsPage> {
                                   icon: const Icon(Icons.chat_bubble_outline, size: 16),
                                   label: const Text('Message Tourist', style: TextStyle(fontSize: 12)),
                                   onPressed: () async {
-                                    if (user == null) return;
                                     final conv = await _chatService.getOrCreateConversation(
                                       currentUserId: user.uid,
                                       currentUserName: _provider?.businessName ?? 'Provider',

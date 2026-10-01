@@ -5,6 +5,7 @@ import '../../services/daraja_service.dart';
 import '../../services/gemini_service.dart';
 import '../../services/telebirr_service.dart';
 import '../../theme/ethio_theme.dart';
+import '../../services/theme_service.dart';
 
 class AdminSystemConfigPage extends StatefulWidget {
   final bool isEmbedded;
@@ -310,149 +311,158 @@ class _AdminSystemConfigPageState extends State<AdminSystemConfigPage>
 
   @override
   Widget build(BuildContext context) {
-    final content = Column(
-      children: [
-        // Header Section
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
+    return ListenableBuilder(
+      listenable: ThemeService(),
+      builder: (context, _) {
+        final isDark = ThemeService().isDarkMode;
+        final content = Column(
+          children: [
+            // Header Section
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: EthioColors.forest.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.settings_suggest, color: EthioColors.forest, size: 24),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'System & Gateway Configuration',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: EthioColors.charcoal,
-                      ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: EthioColors.forest.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    Text(
-                      'Admin Restricted • Configure Gemini AI & Payment Gateways (Safaricom M-Pesa & Telebirr)',
-                      style: TextStyle(fontSize: 12, color: EthioColors.muted),
+                    child: const Icon(Icons.settings_suggest, color: EthioColors.forest, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'System & Gateway Configuration',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : EthioColors.charcoal,
+                          ),
+                        ),
+                        Text(
+                          'Admin Restricted • Configure Gemini AI & Payment Gateways (Safaricom M-Pesa & Telebirr)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.white60 : EthioColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: EthioColors.forest,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text('Save Configuration', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: _saveAllSettings,
+                  ),
+                ],
+              ),
+            ),
+
+            // Tab Bar
+            Container(
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: EthioColors.forest,
+                indicatorWeight: 3,
+                labelColor: EthioColors.forest,
+                unselectedLabelColor: isDark ? Colors.white54 : EthioColors.muted,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                tabs: const [
+                  Tab(
+                    icon: Icon(Icons.auto_awesome, size: 18),
+                    text: 'Gemini AI',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.payments, size: 18),
+                    text: 'Safaricom M-Pesa (ET) 🇪🇹',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.phone_android, size: 18),
+                    text: 'Telebirr Dev 📱',
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: isDark ? Colors.white12 : EthioColors.divider),
+
+            // Test Status Banner if present
+            if (_testStatusMessage != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                color: _testSuccess ? Colors.green.shade50 : Colors.amber.shade50,
+                child: Row(
+                  children: [
+                    Icon(
+                      _testSuccess ? Icons.check_circle : Icons.info_outline,
+                      size: 18,
+                      color: _testSuccess ? Colors.green.shade800 : Colors.amber.shade900,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _testStatusMessage!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _testSuccess ? Colors.green.shade900 : Colors.amber.shade900,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: EthioColors.forest,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                icon: const Icon(Icons.check, size: 18),
-                label: const Text('Save Configuration', style: TextStyle(fontWeight: FontWeight.bold)),
-                onPressed: _saveAllSettings,
-              ),
-            ],
-          ),
-        ),
 
-        // Tab Bar
-        Container(
-          color: Colors.white,
-          child: TabBar(
-            controller: _tabController,
-            indicatorColor: EthioColors.forest,
-            indicatorWeight: 3,
-            labelColor: EthioColors.forest,
-            unselectedLabelColor: EthioColors.muted,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            tabs: const [
-              Tab(
-                icon: Icon(Icons.auto_awesome, size: 18),
-                text: 'Gemini AI',
+            // Tab Views
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildGeminiTab(),
+                  _buildDarajaTab(),
+                  _buildTelebirrTab(),
+                ],
               ),
-              Tab(
-                icon: Icon(Icons.payments, size: 18),
-                text: 'Safaricom M-Pesa (ET) 🇪🇹',
-              ),
-              Tab(
-                icon: Icon(Icons.phone_android, size: 18),
-                text: 'Telebirr Dev 📱',
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1, color: EthioColors.divider),
-
-        // Test Status Banner if present
-        if (_testStatusMessage != null)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            color: _testSuccess ? Colors.green.shade50 : Colors.amber.shade50,
-            child: Row(
-              children: [
-                Icon(
-                  _testSuccess ? Icons.check_circle : Icons.info_outline,
-                  size: 18,
-                  color: _testSuccess ? Colors.green.shade800 : Colors.amber.shade900,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _testStatusMessage!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: _testSuccess ? Colors.green.shade900 : Colors.amber.shade900,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
             ),
+          ],
+        );
+
+        if (widget.isEmbedded) {
+          return content;
+        }
+
+        return Scaffold(
+          backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey.shade50,
+          appBar: AppBar(
+            title: const Text('System Configuration', style: TextStyle(fontWeight: FontWeight.bold)),
+            backgroundColor: const Color(0xFF1B4D3E),
+            foregroundColor: Colors.white,
+            elevation: 0,
           ),
-
-        // Tab Views
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildGeminiTab(),
-              _buildDarajaTab(),
-              _buildTelebirrTab(),
-            ],
-          ),
-        ),
-      ],
-    );
-
-    if (widget.isEmbedded) {
-      return content;
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: const Text('System Configuration', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF1B4D3E),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: content,
+          body: content,
+        );
+      },
     );
   }
 

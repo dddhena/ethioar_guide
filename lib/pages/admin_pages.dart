@@ -240,7 +240,7 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
                 child: Image.network(
                   _imageUrlController.text.trim(),
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     color: Colors.grey.shade100,
                     child: const Center(
                       child: Text('Invalid image URL or cannot load preview', style: TextStyle(color: Colors.red, fontSize: 12)),

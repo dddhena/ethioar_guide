@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'ar_guide.dart';
 
 class CameraPreviewPage extends StatelessWidget {
-  const CameraPreviewPage({Key? key}) : super(key: key);
+  const CameraPreviewPage({super.key});
 
   @override
   Widget build(BuildContext context) {

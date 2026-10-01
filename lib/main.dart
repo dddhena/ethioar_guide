@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'theme/ethio_theme.dart';
+import 'services/location_service.dart';
 import 'services/theme_service.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
@@ -37,7 +38,6 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late Future<FirebaseApp> _initialization;
-  late Future<void> _themeInitialization;
   final ThemeService _themeService = ThemeService();
 
   @override
@@ -45,7 +45,8 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     // Initialize Firebase with the generated platform-specific options.
     _initialization = Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-    _themeInitialization = _themeService.initialize();
+    _themeService.initialize();
+    LocationService.getCurrentPositionWeb(); // Pre-warm location cache for instant availability across all pages
   }
 
   @override
@@ -128,7 +129,7 @@ class _MyAppState extends State<MyApp> {
 }
 
 class HomeDecider extends StatelessWidget {
-  const HomeDecider({Key? key}) : super(key: key);
+  const HomeDecider({super.key});
 
   @override
   Widget build(BuildContext context) {

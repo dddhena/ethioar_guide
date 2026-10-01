@@ -112,7 +112,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ?.copyWith(fontWeight: FontWeight.bold, color: Colors.teal.shade900),
             ),
             const SizedBox(height: 10),
-            ..._roles.map((r) => _buildRoleTile(r)).toList(),
+            ..._roles.map((r) => _buildRoleTile(r)),
 
             const SizedBox(height: 20),
             const Divider(),

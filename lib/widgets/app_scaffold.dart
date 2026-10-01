@@ -5,7 +5,7 @@ class AppScaffold extends StatelessWidget {
   final Widget body;
   final List<Widget>? actions;
 
-  const AppScaffold({Key? key, required this.title, required this.body, this.actions}) : super(key: key);
+  const AppScaffold({super.key, required this.title, required this.body, this.actions});
 
   @override
   Widget build(BuildContext context) {

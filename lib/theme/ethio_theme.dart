@@ -196,16 +196,16 @@ ThemeData buildEthioTheme() {
       indicatorColor: EthioColors.forest.withValues(alpha: 0.12),
       indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-      labelTextStyle: MaterialStateProperty.resolveWith((states) {
-        final isSelected = states.contains(MaterialState.selected);
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final isSelected = states.contains(WidgetState.selected);
         return TextStyle(
           fontSize: 11,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
           color: isSelected ? EthioColors.forest : EthioColors.muted,
         );
       }),
-      iconTheme: MaterialStateProperty.resolveWith((states) {
-        final isSelected = states.contains(MaterialState.selected);
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        final isSelected = states.contains(WidgetState.selected);
         return IconThemeData(
           size: 24,
           color: isSelected ? EthioColors.forest : EthioColors.muted,
@@ -388,16 +388,16 @@ ThemeData buildEthioDarkTheme() {
       indicatorColor: EthioColors.forestLight.withValues(alpha: 0.15),
       indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-      labelTextStyle: MaterialStateProperty.resolveWith((states) {
-        final isSelected = states.contains(MaterialState.selected);
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final isSelected = states.contains(WidgetState.selected);
         return TextStyle(
           fontSize: 11,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
           color: isSelected ? EthioColors.forestLight : const Color(0xFF606060),
         );
       }),
-      iconTheme: MaterialStateProperty.resolveWith((states) {
-        final isSelected = states.contains(MaterialState.selected);
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        final isSelected = states.contains(WidgetState.selected);
         return IconThemeData(
           size: 24,
           color: isSelected ? EthioColors.forestLight : const Color(0xFF606060),

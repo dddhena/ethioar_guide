@@ -329,9 +329,9 @@ class _DashboardPageState extends State<DashboardPage> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: EthioColors.adminGold.withOpacity(0.1),
+              color: EthioColors.adminGold.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: EthioColors.adminGold.withOpacity(0.3)),
+              border: Border.all(color: EthioColors.adminGold.withValues(alpha: 0.3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

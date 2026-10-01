@@ -21,7 +21,7 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
   double _currentLat = 9.0320; // Default Addis Ababa
   double _currentLon = 38.7469;
   String _locationLabel = 'Addis Ababa';
-  double? _radiusKm = 150.0;
+  final double? _radiusKm = 150.0;
 
   Future<void> _takePhoto() async {
     final input = html.FileUploadInputElement();

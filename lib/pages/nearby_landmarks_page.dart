@@ -30,9 +30,9 @@ class _NearbyLandmarksPageState extends State<NearbyLandmarksPage> {
   final FirestoreService _fs = FirestoreService();
 
   // Current reference location
-  double _currentLat = 9.0320; // Default Addis Ababa
-  double _currentLon = 38.7469;
-  String _locationName = 'Addis Ababa';
+  late double _currentLat;
+  late double _currentLon;
+  late String _locationName;
   bool _isGpsLocation = false;
 
   // Filters and state
@@ -50,19 +50,26 @@ class _NearbyLandmarksPageState extends State<NearbyLandmarksPage> {
       _currentLat = widget.initialLocation!.latitude;
       _currentLon = widget.initialLocation!.longitude;
       _locationName = widget.initialLocationName ?? 'Selected Location';
+      _isGpsLocation = false;
     } else {
+      _currentLat = LocationService.currentLatLng.latitude;
+      _currentLon = LocationService.currentLatLng.longitude;
+      _locationName = LocationService.isUsingCustomLocation
+          ? LocationService.currentLocationName
+          : 'My Location (${LocationService.currentLocationName})';
+      _isGpsLocation = !LocationService.isUsingCustomLocation;
       _detectCurrentLocation();
     }
     _loadLandmarks();
   }
 
   Future<void> _detectCurrentLocation() async {
-    final pos = await LocationService.getCurrentPositionWeb();
-    if (pos != null && mounted) {
+    final pos = await LocationService.getCurrentPositionWeb(forceRefresh: true);
+    if (pos != null && mounted && !LocationService.isUsingCustomLocation) {
       setState(() {
         _currentLat = pos['latitude']!;
         _currentLon = pos['longitude']!;
-        _locationName = 'My Current GPS';
+        _locationName = 'My Location (${LocationService.currentLocationName})';
         _isGpsLocation = true;
       });
       _recalculateNearby();
@@ -131,9 +138,10 @@ class _NearbyLandmarksPageState extends State<NearbyLandmarksPage> {
                     child: Icon(Icons.my_location, color: Colors.teal.shade800),
                   ),
                   title: const Text('Use Live Device GPS', style: TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: const Text('Detect your current location via browser/phone GPS'),
+                  subtitle: Text('Detect your current location (${LocationService.currentLocationName})'),
                   onTap: () async {
                     Navigator.of(ctx).pop();
+                    LocationService.resetToLiveGps();
                     await _detectCurrentLocation();
                   },
                 ),
@@ -154,10 +162,13 @@ class _NearbyLandmarksPageState extends State<NearbyLandmarksPage> {
                       ),
                     );
                     if (selected != null && mounted) {
+                      final nearest = LocationService.getNearestCity(selected.latitude, selected.longitude);
+                      final name = 'Custom Map Pin (${nearest.name})';
+                      LocationService.setFlexibleLocation(selected, name);
                       setState(() {
                         _currentLat = selected.latitude;
                         _currentLon = selected.longitude;
-                        _locationName = 'Custom Map Pin';
+                        _locationName = name;
                         _isGpsLocation = false;
                         _recalculateNearby();
                       });
@@ -192,6 +203,8 @@ class _NearbyLandmarksPageState extends State<NearbyLandmarksPage> {
                         ),
                         onTap: () {
                           Navigator.of(ctx).pop();
+                          final cityLatLng = LatLng(city.latitude, city.longitude);
+                          LocationService.setFlexibleLocation(cityLatLng, city.name);
                           setState(() {
                             _currentLat = city.latitude;
                             _currentLon = city.longitude;

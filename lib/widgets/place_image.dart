@@ -27,7 +27,7 @@ class PlaceImage extends StatelessWidget {
           height: height,
           width: double.infinity,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _placeholder(radius),
+          errorBuilder: (_, _, _) => _placeholder(radius),
         ),
       );
     }

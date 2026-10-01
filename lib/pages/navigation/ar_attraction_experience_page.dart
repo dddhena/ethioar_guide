@@ -189,7 +189,7 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.celebration_rounded, color: Colors.amber, size: 28),
@@ -268,7 +268,7 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
           ),
           const SizedBox(height: 12),
 
-          ..._arTags.map((tag) => _buildArTagCard(tag)).toList(),
+          ..._arTags.map((tag) => _buildArTagCard(tag)),
         ],
       ),
     );
@@ -314,7 +314,7 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: EthioColors.forestLight.withOpacity(0.12),
+              color: EthioColors.forestLight.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.place_rounded, color: EthioColors.forest, size: 20),
@@ -374,7 +374,7 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: EthioColors.forest.withOpacity(0.3),
+                    color: EthioColors.forest.withValues(alpha: 0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -499,7 +499,7 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.85),
+              color: Colors.black.withValues(alpha: 0.85),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: Colors.white24),
             ),
@@ -558,7 +558,7 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.2),
+                      color: Colors.green.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.greenAccent),
                     ),
@@ -595,7 +595,7 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? EthioColors.forest.withOpacity(0.9) : Colors.black.withOpacity(0.75),
+          color: isSelected ? EthioColors.forest.withValues(alpha: 0.9) : Colors.black.withValues(alpha: 0.75),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: isSelected ? Colors.amber : Colors.white54, width: 1.5),
           boxShadow: const [
@@ -632,7 +632,7 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
     return ListView.separated(
       padding: const EdgeInsets.all(20),
       itemCount: _historicalGallery.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 20),
+      separatorBuilder: (_, _) => const SizedBox(height: 20),
       itemBuilder: (context, idx) {
         final item = _historicalGallery[idx];
         return Container(
@@ -650,7 +650,7 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
                 height: 220,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, _, _) => Container(
                   height: 200,
                   color: EthioColors.sand,
                   child: const Center(child: Icon(Icons.castle_rounded, size: 48, color: EthioColors.stone)),

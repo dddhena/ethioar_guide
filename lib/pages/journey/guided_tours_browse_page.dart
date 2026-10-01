@@ -30,7 +30,7 @@ class GuidedToursBrowsePage extends StatelessWidget {
           }
           return ListView.separated(
             itemCount: tours.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final tour = tours[index];
               return _TourCard(tour: tour);

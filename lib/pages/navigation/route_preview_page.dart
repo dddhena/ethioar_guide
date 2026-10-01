@@ -9,6 +9,7 @@ import '../../services/routing_service.dart';
 import '../../theme/ethio_theme.dart';
 import '../../widgets/navigation/route_map_viewer.dart';
 import 'ar_realtime_navigation_page.dart';
+import '../map_picker.dart';
 
 enum JourneyContext {
   arDiscovery,
@@ -90,60 +91,50 @@ class _RoutePreviewPageState extends State<RoutePreviewPage> with SingleTickerPr
 
     // 2. Starting Point Setup:
     // If a custom start location is provided, use that.
-    // Otherwise, automatically acquire the user's live current location!
+    // Otherwise, use the user's flexible location (live GPS or selected reference location)!
     if (widget.customStartLocation != null) {
       _startLocation = widget.customStartLocation!;
-      _startLocationName = 'Custom Starting Location';
+      _startLocationName = 'Departure (${LocationService.getNearestCity(_startLocation.latitude, _startLocation.longitude).name})';
       _isUsingCurrentLocation = false;
       _isLocatingUser = false;
-      if (widget.contextMode == JourneyContext.guidedJourney && widget.guidedTour != null) {
-        _setupGuidedTourWaypoints();
-      }
-      await _loadRoute();
     } else {
-      // Fallback position near destination while GPS resolves
-      _startLocation = LatLng(
-        _destinationLocation.latitude - 0.0154,
-        _destinationLocation.longitude - 0.0142,
-      );
-      _startLocationName = 'Detecting current GPS location...';
-      _isLocatingUser = true;
-
-      setState(() {
-        _isLoadingRoute = true;
-      });
-
-      try {
-        final currentPos = await LocationService.getCurrentUserLocation();
-        if (mounted) {
-          if (currentPos != null) {
-            _startLocation = currentPos;
-            _startLocationName = 'My Current Location';
-            _isUsingCurrentLocation = true;
-          } else {
-            _startLocationName = 'Nearby Departure Point';
-            _isUsingCurrentLocation = false;
-          }
-        }
-      } catch (_) {
-        if (mounted) {
-          _startLocationName = 'Nearby Departure Point';
-          _isUsingCurrentLocation = false;
-        }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLocatingUser = false;
-          });
-        }
-      }
-
-      if (widget.contextMode == JourneyContext.guidedJourney && widget.guidedTour != null) {
-        _setupGuidedTourWaypoints();
-      }
-
-      await _loadRoute();
+      _startLocation = LocationService.currentLatLng;
+      _startLocationName = LocationService.isUsingCustomLocation
+          ? 'Departure: ${LocationService.currentLocationName}'
+          : 'My Location (${LocationService.currentLocationName})';
+      _isUsingCurrentLocation = !LocationService.isUsingCustomLocation;
+      _isLocatingUser = false;
     }
+
+    if (widget.contextMode == JourneyContext.guidedJourney && widget.guidedTour != null) {
+      _setupGuidedTourWaypoints();
+    }
+
+    await _loadRoute();
+
+    // In background, ensure live GPS is fresh if user is not in custom mode
+    if (widget.customStartLocation == null && !LocationService.isUsingCustomLocation) {
+      _refreshCurrentLocationSilently();
+    }
+  }
+
+  Future<void> _refreshCurrentLocationSilently() async {
+    try {
+      final currentPos = await LocationService.getCurrentUserLocation(forceRefresh: true);
+      if (mounted && currentPos != null && !LocationService.isUsingCustomLocation && widget.customStartLocation == null) {
+        if (_startLocation.latitude != currentPos.latitude || _startLocation.longitude != currentPos.longitude) {
+          setState(() {
+            _startLocation = currentPos;
+            _startLocationName = 'My Location (${LocationService.currentLocationName})';
+            _isUsingCurrentLocation = true;
+          });
+          if (widget.contextMode == JourneyContext.guidedJourney && widget.guidedTour != null) {
+            _setupGuidedTourWaypoints();
+          }
+          await _loadRoute();
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _refreshCurrentLocation() async {
@@ -153,23 +144,24 @@ class _RoutePreviewPageState extends State<RoutePreviewPage> with SingleTickerPr
       _stopAnimation();
     });
 
-    final currentPos = await LocationService.getCurrentUserLocation();
+    LocationService.resetToLiveGps();
+    final currentPos = await LocationService.getCurrentUserLocation(forceRefresh: true);
     if (!mounted) return;
 
     if (currentPos != null) {
       setState(() {
         _startLocation = currentPos;
-        _startLocationName = 'My Current Location';
+        _startLocationName = 'My Location (${LocationService.currentLocationName})';
         _isUsingCurrentLocation = true;
         _isLocatingUser = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content: Row(
             children: [
-              Icon(Icons.gps_fixed_rounded, color: Colors.white, size: 20),
-              SizedBox(width: 10),
-              Text('Starting point updated to your current GPS location!'),
+              const Icon(Icons.gps_fixed_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Text('Departure updated to ${LocationService.currentLocationName}!'),
             ],
           ),
           backgroundColor: EthioColors.forest,
@@ -204,6 +196,192 @@ class _RoutePreviewPageState extends State<RoutePreviewPage> with SingleTickerPr
     }
 
     await _loadRoute();
+  }
+
+  void _showDeparturePointPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Container(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: EthioColors.forest.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.edit_location_alt_rounded, color: EthioColors.forest, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Choose Departure Point',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: EthioColors.charcoal),
+                          ),
+                          Text(
+                            'Select live GPS, pick any city, or choose on map',
+                            style: TextStyle(fontSize: 12, color: EthioColors.muted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Option 1: Live GPS
+                ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: Color(0xFFE8F5E9),
+                    child: Icon(Icons.my_location_rounded, color: EthioColors.forest),
+                  ),
+                  title: const Text('My Live GPS Location', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('Device location in ${LocationService.currentLocationName}'),
+                  trailing: _isUsingCurrentLocation ? const Icon(Icons.check_circle, color: EthioColors.forest) : null,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  tileColor: _isUsingCurrentLocation ? EthioColors.forest.withValues(alpha: 0.08) : null,
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _refreshCurrentLocation();
+                  },
+                ),
+                const SizedBox(height: 6),
+
+                // Option 2: Pick on Map
+                ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: Color(0xFFFFF3E0),
+                    child: Icon(Icons.map_rounded, color: EthioColors.terracotta),
+                  ),
+                  title: const Text('Pick Custom Point on Map', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Tap any road, town, or location on the map'),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  onTap: () async {
+                    Navigator.of(ctx).pop();
+                    final selected = await Navigator.of(context).push<LatLng>(
+                      MaterialPageRoute(
+                        builder: (_) => MapPickerPage(initialPosition: _startLocation),
+                      ),
+                    );
+                    if (selected != null && mounted) {
+                      final nearest = LocationService.getNearestCity(selected.latitude, selected.longitude);
+                      final name = 'Custom Map Pin (${nearest.name})';
+                      LocationService.setFlexibleLocation(selected, name);
+                      setState(() {
+                        _startLocation = selected;
+                        _startLocationName = name;
+                        _isUsingCurrentLocation = false;
+                      });
+                      if (widget.contextMode == JourneyContext.guidedJourney && widget.guidedTour != null) {
+                        _setupGuidedTourWaypoints();
+                      }
+                      await _loadRoute();
+                    }
+                  },
+                ),
+                const Divider(height: 24),
+
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  child: Text(
+                    'Explore From Ethiopian Cities:',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: EthioColors.earth),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: LocationService.ethiopianCities.length,
+                    itemBuilder: (context, i) {
+                      final city = LocationService.ethiopianCities[i];
+                      final isSelected = _startLocationName.contains(city.name);
+                      return ListTile(
+                        dense: true,
+                        leading: Icon(
+                          isSelected ? Icons.radio_button_checked : Icons.location_city_rounded,
+                          color: isSelected ? EthioColors.forest : Colors.grey.shade600,
+                          size: 20,
+                        ),
+                        title: Text(
+                          city.name,
+                          style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+                        ),
+                        subtitle: Text(
+                          city.description,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        trailing: Text(
+                          '${city.latitude.toStringAsFixed(2)}, ${city.longitude.toStringAsFixed(2)}',
+                          style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                        ),
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          final cityLatLng = LatLng(city.latitude, city.longitude);
+                          LocationService.setFlexibleLocation(cityLatLng, city.name);
+                          setState(() {
+                            _startLocation = cityLatLng;
+                            _startLocationName = city.name;
+                            _isUsingCurrentLocation = false;
+                          });
+                          if (widget.contextMode == JourneyContext.guidedJourney && widget.guidedTour != null) {
+                            _setupGuidedTourWaypoints();
+                          }
+                          _loadRoute();
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _swapStartAndDestination() {
+    setState(() {
+      final tempLoc = _startLocation;
+      final tempName = _startLocationName;
+      _startLocation = _destinationLocation;
+      _startLocationName = _getDestinationName();
+      _destinationLocation = tempLoc;
+      _isUsingCurrentLocation = false;
+    });
+
+    if (widget.contextMode == JourneyContext.guidedJourney && widget.guidedTour != null) {
+      _setupGuidedTourWaypoints();
+    }
+    _loadRoute();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Swapped starting point and destination!'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   void _setupGuidedTourWaypoints() {
@@ -412,7 +590,7 @@ class _RoutePreviewPageState extends State<RoutePreviewPage> with SingleTickerPr
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: EthioColors.sand.withOpacity(0.5),
+                color: EthioColors.sand.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -559,8 +737,8 @@ class _RoutePreviewPageState extends State<RoutePreviewPage> with SingleTickerPr
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: widget.contextMode == JourneyContext.arDiscovery
-                    ? EthioColors.forest.withOpacity(0.12)
-                    : EthioColors.terracotta.withOpacity(0.12),
+                    ? EthioColors.forest.withValues(alpha: 0.12)
+                    : EthioColors.terracotta.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -685,7 +863,7 @@ class _RoutePreviewPageState extends State<RoutePreviewPage> with SingleTickerPr
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: _isUsingCurrentLocation ? EthioColors.forest.withOpacity(0.15) : EthioColors.sand,
+                  color: _isUsingCurrentLocation ? EthioColors.forest.withValues(alpha: 0.15) : EthioColors.sand,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -721,7 +899,7 @@ class _RoutePreviewPageState extends State<RoutePreviewPage> with SingleTickerPr
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                             decoration: BoxDecoration(
-                              color: EthioColors.forest.withOpacity(0.15),
+                              color: EthioColors.forest.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Text(
@@ -746,25 +924,68 @@ class _RoutePreviewPageState extends State<RoutePreviewPage> with SingleTickerPr
                   ],
                 ),
               ),
-              IconButton(
-                icon: _isLocatingUser
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: EthioColors.forest),
-                      )
-                    : const Icon(Icons.gps_fixed_rounded, size: 20, color: EthioColors.forest),
-                tooltip: 'Re-detect Current Location',
-                onPressed: _isLocatingUser ? null : _refreshCurrentLocation,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: EthioColors.forest,
+                    ),
+                    icon: const Icon(Icons.edit_location_alt_rounded, size: 16),
+                    label: const Text('Change', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    onPressed: _showDeparturePointPicker,
+                  ),
+                  IconButton(
+                    icon: _isLocatingUser
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: EthioColors.forest),
+                          )
+                        : const Icon(Icons.gps_fixed_rounded, size: 18, color: EthioColors.forest),
+                    tooltip: 'Reset to Live GPS',
+                    onPressed: _isLocatingUser ? null : _refreshCurrentLocation,
+                  ),
+                ],
               ),
             ],
           ),
           Padding(
             padding: const EdgeInsets.only(left: 14, top: 2, bottom: 2),
-            child: Container(
-              width: 2,
-              height: 14,
-              color: EthioColors.divider,
+            child: Row(
+              children: [
+                Container(
+                  width: 2,
+                  height: 18,
+                  color: EthioColors.divider,
+                ),
+                const SizedBox(width: 10),
+                InkWell(
+                  onTap: _swapStartAndDestination,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: EthioColors.divider),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.swap_vert_rounded, size: 14, color: EthioColors.forest),
+                        SizedBox(width: 4),
+                        Text(
+                          'Swap Direction',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: EthioColors.charcoal),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Row(
@@ -772,7 +993,7 @@ class _RoutePreviewPageState extends State<RoutePreviewPage> with SingleTickerPr
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.12),
+                  color: Colors.red.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -917,7 +1138,7 @@ class _RoutePreviewPageState extends State<RoutePreviewPage> with SingleTickerPr
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: EthioColors.forest.withOpacity(0.3),
+                    color: EthioColors.forest.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -963,7 +1184,7 @@ class _RoutePreviewPageState extends State<RoutePreviewPage> with SingleTickerPr
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: EthioColors.forestLight.withOpacity(0.15),
+                  color: EthioColors.forestLight.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.smart_display_rounded, color: EthioColors.forest, size: 18),
@@ -1066,7 +1287,7 @@ class _RoutePreviewPageState extends State<RoutePreviewPage> with SingleTickerPr
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
-          '${speed}×',
+          '$speed×',
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,

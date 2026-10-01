@@ -271,7 +271,7 @@ class _ExplorePageState extends State<ExplorePage> {
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: _categories.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 10),
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
                       itemBuilder: (context, i) {
                         final cat = _categories[i];
                         final selected = _selectedCategory == cat.id;
@@ -314,7 +314,7 @@ class _ExplorePageState extends State<ExplorePage> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: _nearby.take(6).length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        separatorBuilder: (_, _) => const SizedBox(width: 12),
                         itemBuilder: (context, i) {
                           final nl = _nearby[i];
                           return _HorizontalPlaceCard(
@@ -333,7 +333,7 @@ class _ExplorePageState extends State<ExplorePage> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: _popular.take(6).length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        separatorBuilder: (_, _) => const SizedBox(width: 12),
                         itemBuilder: (context, i) {
                           final lm = _popular[i];
                           return _HorizontalPlaceCard(

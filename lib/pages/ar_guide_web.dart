@@ -6,7 +6,7 @@ import 'map_picker.dart';
 import 'landmarks_page.dart';
 
 class ARGuidePage extends StatefulWidget {
-  const ARGuidePage({Key? key}) : super(key: key);
+  const ARGuidePage({super.key});
 
   @override
   State<ARGuidePage> createState() => _ARGuidePageState();
