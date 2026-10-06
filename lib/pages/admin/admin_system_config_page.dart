@@ -55,6 +55,12 @@ class _AdminSystemConfigPageState extends State<AdminSystemConfigPage>
   late TextEditingController _telebirrShortCodeCtrl;
   late bool _telebirrIsSandbox;
 
+  // OpenStreetMap Controllers
+  late TextEditingController _osmTileUrlCtrl;
+  late TextEditingController _osmApiKeyCtrl;
+  late TextEditingController _osrmRoutingUrlCtrl;
+  late TextEditingController _osmUserAgentCtrl;
+
   // Testing states
   bool _testingConnection = false;
   String? _testStatusMessage;
@@ -69,9 +75,9 @@ class _AdminSystemConfigPageState extends State<AdminSystemConfigPage>
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 3,
+      length: 4,
       vsync: this,
-      initialIndex: widget.initialTabIndex.clamp(0, 2),
+      initialIndex: widget.initialTabIndex.clamp(0, 3),
     );
 
     _geminiKeyCtrl = TextEditingController(text: ApiConfig.geminiApiKey);
@@ -94,6 +100,12 @@ class _AdminSystemConfigPageState extends State<AdminSystemConfigPage>
     _telebirrPublicKeyCtrl = TextEditingController(text: ApiConfig.telebirrPublicKey);
     _telebirrShortCodeCtrl = TextEditingController(text: ApiConfig.telebirrShortCode);
     _telebirrIsSandbox = ApiConfig.isTelebirrSandbox;
+
+    // OpenStreetMap
+    _osmTileUrlCtrl = TextEditingController(text: ApiConfig.osmTileUrl);
+    _osmApiKeyCtrl = TextEditingController(text: ApiConfig.osmApiKey);
+    _osrmRoutingUrlCtrl = TextEditingController(text: ApiConfig.osrmRoutingUrl);
+    _osmUserAgentCtrl = TextEditingController(text: ApiConfig.osmUserAgent);
   }
 
   @override
@@ -108,6 +120,10 @@ class _AdminSystemConfigPageState extends State<AdminSystemConfigPage>
     _telebirrAppKeyCtrl.dispose();
     _telebirrPublicKeyCtrl.dispose();
     _telebirrShortCodeCtrl.dispose();
+    _osmTileUrlCtrl.dispose();
+    _osmApiKeyCtrl.dispose();
+    _osrmRoutingUrlCtrl.dispose();
+    _osmUserAgentCtrl.dispose();
     _stkTestPhoneCtrl.dispose();
     _stkTestAmountCtrl.dispose();
     super.dispose();
@@ -134,6 +150,14 @@ class _AdminSystemConfigPageState extends State<AdminSystemConfigPage>
       publicKey: _telebirrPublicKeyCtrl.text.trim(),
       shortCode: _telebirrShortCodeCtrl.text.trim(),
       isSandbox: _telebirrIsSandbox,
+    );
+
+    // 4. OpenStreetMap
+    ApiConfig.setOsmConfig(
+      tileUrl: _osmTileUrlCtrl.text.trim(),
+      apiKey: _osmApiKeyCtrl.text.trim(),
+      routingUrl: _osrmRoutingUrlCtrl.text.trim(),
+      userAgent: _osmUserAgentCtrl.text.trim(),
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -363,7 +387,7 @@ class _AdminSystemConfigPageState extends State<AdminSystemConfigPage>
                                         ),
                                       ),
                                       Text(
-                                        'Admin Restricted • Configure Gemini AI & Payment Gateways',
+                                        'Admin Restricted • Configure Gemini AI, Payment Gateways & OpenStreetMap',
                                         style: TextStyle(
                                           fontSize: 11,
                                           color: isDark ? Colors.white60 : EthioColors.muted,
@@ -415,7 +439,7 @@ class _AdminSystemConfigPageState extends State<AdminSystemConfigPage>
                                     ),
                                   ),
                                   Text(
-                                    'Admin Restricted • Configure Gemini AI & Payment Gateways (Safaricom M-Pesa & Telebirr)',
+                                    'Admin Restricted • Configure Gemini AI, Payment Gateways & OpenStreetMap',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: isDark ? Colors.white60 : EthioColors.muted,
@@ -463,6 +487,10 @@ class _AdminSystemConfigPageState extends State<AdminSystemConfigPage>
                         icon: Icon(Icons.phone_android, size: 18),
                         text: 'Telebirr Dev 📱',
                       ),
+                      Tab(
+                        icon: Icon(Icons.map, size: 18),
+                        text: 'OpenStreetMap 🗺️',
+                      ),
                     ],
                   ),
                 ),
@@ -504,6 +532,7 @@ class _AdminSystemConfigPageState extends State<AdminSystemConfigPage>
                       _buildGeminiTab(),
                       _buildDarajaTab(),
                       _buildTelebirrTab(),
+                      _buildOsmTab(),
                     ],
                   ),
                 ),
@@ -517,7 +546,7 @@ class _AdminSystemConfigPageState extends State<AdminSystemConfigPage>
             return Scaffold(
               backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey.shade50,
               appBar: AppBar(
-                title: const Text('System Configuration', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: const Text('System & Map Configuration', style: TextStyle(fontWeight: FontWeight.bold)),
                 backgroundColor: const Color(0xFF1B4D3E),
                 foregroundColor: Colors.white,
                 elevation: 0,
@@ -1309,6 +1338,270 @@ class _AdminSystemConfigPageState extends State<AdminSystemConfigPage>
           ),
         ],
       ),
+        );
+      },
+    );
+  }
+
+  // ===========================================================================
+  // 4. OPENSTREETMAP CONFIGURATION TAB
+  // ===========================================================================
+  Widget _buildOsmTab() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 768;
+        
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(isMobile ? 16 : 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.blue.shade50,
+                      Colors.indigo.shade50.withValues(alpha: 0.6),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade300),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade700,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            '🗺️ OSM',
+                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'OpenStreetMap Configuration',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1565C0)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Configure OpenStreetMap tile servers, routing (OSRM), and API keys for map functionality.',
+                      style: TextStyle(fontSize: 12, color: Colors.black87),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Tile URL
+              const Text(
+                'Tile Server URL',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _osmTileUrlCtrl,
+                decoration: InputDecoration(
+                  hintText: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+                  prefixIcon: const Icon(Icons.layers, color: Colors.blue),
+                  suffixIcon: _osmTileUrlCtrl.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            setState(() => _osmTileUrlCtrl.clear());
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Use {z}, {x}, {y} placeholders for zoom, x, and y coordinates. Add {apiKey} if your provider requires an API key.',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 16),
+
+              // API Key (optional)
+              const Text(
+                'API Key (Optional)',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _osmApiKeyCtrl,
+                decoration: InputDecoration(
+                  hintText: 'Enter API key if required by tile provider',
+                  prefixIcon: const Icon(Icons.key, color: Colors.blue),
+                  suffixIcon: _osmApiKeyCtrl.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            setState(() => _osmApiKeyCtrl.clear());
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 16),
+
+              // OSRM Routing URL
+              const Text(
+                'OSRM Routing URL',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _osrmRoutingUrlCtrl,
+                decoration: InputDecoration(
+                  hintText: 'https://router.project-osrm.org',
+                  prefixIcon: const Icon(Icons.route, color: Colors.blue),
+                  suffixIcon: _osrmRoutingUrlCtrl.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            setState(() => _osrmRoutingUrlCtrl.clear());
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'OSRM (Open Source Routing Machine) server URL for route calculations and navigation.',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 16),
+
+              // User Agent
+              const Text(
+                'User Agent',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _osmUserAgentCtrl,
+                decoration: InputDecoration(
+                  hintText: 'com.example.ethioar_guide',
+                  prefixIcon: const Icon(Icons.devices, color: Colors.blue),
+                  suffixIcon: _osmUserAgentCtrl.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            setState(() => _osmUserAgentCtrl.clear());
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'User agent string for OSM API requests (identifies your app to tile/routing servers).',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 20),
+
+              // Preset Buttons
+              const Text(
+                'Quick Presets',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ActionChip(
+                    avatar: const Icon(Icons.public, size: 16),
+                    label: const Text('OpenStreetMap Standard', style: TextStyle(fontSize: 11)),
+                    onPressed: () {
+                      setState(() {
+                        _osmTileUrlCtrl.text = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+                        _osrmRoutingUrlCtrl.text = 'https://router.project-osrm.org';
+                        _osmUserAgentCtrl.text = 'com.example.ethioar_guide';
+                      });
+                    },
+                  ),
+                  ActionChip(
+                    avatar: const Icon(Icons.satellite, size: 16),
+                    label: const Text('CartoDB Voyager', style: TextStyle(fontSize: 11)),
+                    onPressed: () {
+                      setState(() {
+                        _osmTileUrlCtrl.text = 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
+                        _osrmRoutingUrlCtrl.text = 'https://router.project-osrm.org';
+                        _osmUserAgentCtrl.text = 'com.example.ethioar_guide';
+                      });
+                    },
+                  ),
+                  ActionChip(
+                    avatar: const Icon(Icons.terrain, size: 16),
+                    label: const Text('CartoDB Dark', style: TextStyle(fontSize: 11)),
+                    onPressed: () {
+                      setState(() {
+                        _osmTileUrlCtrl.text = 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+                        _osrmRoutingUrlCtrl.text = 'https://router.project-osrm.org';
+                        _osmUserAgentCtrl.text = 'com.example.ethioar_guide';
+                      });
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Info Box
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, size: 18, color: Colors.blue.shade700),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Free & Open Source',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.blue.shade900),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'OpenStreetMap is free and open-source. Use their servers responsibly. For production, consider hosting your own tile server or using a paid provider.',
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade700, height: 1.4),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
