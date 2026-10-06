@@ -171,7 +171,91 @@ class ApiConfig {
   }
 
   // ===========================================================================
-  // 4. PRESET LOADER FOR FREE SANDBOX / TEST ENVIRONMENTS
+  // 4. OPENSTREETMAP & MAPPING CONFIGURATION
+  // ===========================================================================
+  static String? _osmTileUrl;
+  static String? _osmApiKey;
+  static String? _osrmRoutingUrl;
+  static String? _osmUserAgent;
+
+  static String get osmTileUrl {
+    if (_osmTileUrl != null && _osmTileUrl!.trim().isNotEmpty) {
+      return _osmTileUrl!.trim();
+    }
+    return const String.fromEnvironment(
+      'OSM_TILE_URL',
+      defaultValue: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+    );
+  }
+
+  /// Resolved tile URL (automatically injecting apiKey if {apiKey} placeholder is present)
+  static String get resolvedTileUrl {
+    var url = osmTileUrl;
+    final key = osmApiKey;
+    if (key.isNotEmpty) {
+      if (url.contains('{apiKey}')) {
+        url = url.replaceAll('{apiKey}', key);
+      } else if (url.contains('{key}')) {
+        url = url.replaceAll('{key}', key);
+      } else if (url.contains('api_key=')) {
+        // already has param
+      } else {
+        url = url.contains('?') ? '$url&api_key=$key' : '$url?api_key=$key';
+      }
+    }
+    return url;
+  }
+
+  static String get osmApiKey {
+    if (_osmApiKey != null && _osmApiKey!.trim().isNotEmpty) {
+      return _osmApiKey!.trim();
+    }
+    return const String.fromEnvironment('OSM_API_KEY', defaultValue: '');
+  }
+
+  static String get osrmRoutingUrl {
+    if (_osrmRoutingUrl != null && _osrmRoutingUrl!.trim().isNotEmpty) {
+      var url = _osrmRoutingUrl!.trim();
+      if (url.endsWith('/')) url = url.substring(0, url.length - 1);
+      return url;
+    }
+    return const String.fromEnvironment(
+      'OSRM_ROUTING_URL',
+      defaultValue: 'https://router.project-osrm.org',
+    );
+  }
+
+  static String get osmUserAgent {
+    if (_osmUserAgent != null && _osmUserAgent!.trim().isNotEmpty) {
+      return _osmUserAgent!.trim();
+    }
+    return const String.fromEnvironment(
+      'OSM_USER_AGENT',
+      defaultValue: 'com.example.ethioar_guide',
+    );
+  }
+
+  static void setOsmConfig({
+    String? tileUrl,
+    String? apiKey,
+    String? routingUrl,
+    String? userAgent,
+  }) {
+    if (tileUrl != null) _osmTileUrl = tileUrl;
+    if (apiKey != null) _osmApiKey = apiKey;
+    if (routingUrl != null) _osrmRoutingUrl = routingUrl;
+    if (userAgent != null) _osmUserAgent = userAgent;
+  }
+
+  static void clearOsmConfig() {
+    _osmTileUrl = null;
+    _osmApiKey = null;
+    _osrmRoutingUrl = null;
+    _osmUserAgent = null;
+  }
+
+  // ===========================================================================
+  // 5. PRESET LOADER FOR FREE SANDBOX / TEST ENVIRONMENTS
   // ===========================================================================
   /// Pre-loads standard sandbox development presets so developers & tourists can test right away
   static void loadSandboxPresets() {
@@ -183,5 +267,10 @@ class ApiConfig {
     // Telebirr test developer sandbox preset
     _telebirrShortCode = '10011';
     _telebirrSandbox = true;
+
+    // OpenStreetMap default preset
+    _osmTileUrl = 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
+    _osrmRoutingUrl = 'https://router.project-osrm.org';
+    _osmUserAgent = 'com.example.ethioar_guide';
   }
 }

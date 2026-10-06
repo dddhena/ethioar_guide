@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../config/api_config.dart';
 
 enum TravelMode {
   driving,
@@ -117,8 +118,9 @@ class RoutingService {
     }
     coords.add('${destination.longitude},${destination.latitude}');
 
+    final routingBase = ApiConfig.osrmRoutingUrl;
     final url = Uri.parse(
-      'https://router.project-osrm.org/route/v1/$modeStr/${coords.join(';')}?overview=full&geometries=geojson&steps=true',
+      '$routingBase/route/v1/$modeStr/${coords.join(';')}?overview=full&geometries=geojson&steps=true',
     );
 
     try {

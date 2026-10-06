@@ -256,102 +256,138 @@ class _AdminPaymentVerificationPageState extends State<AdminPaymentVerificationP
           final verified = allPayments.where((p) => p.isVerified).toList();
           final rejected = allPayments.where((p) => p.isRejected).toList();
 
-          return Column(
-            children: [
-              // ── Header Stats ──────────────────────────────────────────
-              Container(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                color: Colors.teal.shade800,
-                child: Column(
-                  children: [
-                    Row(
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = constraints.maxWidth < 768;
+              
+              return Column(
+                children: [
+                  // ── Header Stats ──────────────────────────────────────────
+                  Container(
+                    padding: EdgeInsets.fromLTRB(isMobile ? 12 : 16, isMobile ? 10 : 12, isMobile ? 12 : 16, isMobile ? 6 : 8),
+                    color: Colors.teal.shade800,
+                    child: Column(
                       children: [
-                        _StatBox(
-                          title: 'Pending',
-                          count: '${pending.length}',
-                          color: Colors.orange.shade300,
-                          icon: Icons.hourglass_top,
-                        ),
-                        const SizedBox(width: 10),
-                        _StatBox(
-                          title: 'Verified',
-                          count: '${verified.length}',
-                          color: Colors.green.shade300,
-                          icon: Icons.check_circle_outline,
-                        ),
-                        const SizedBox(width: 10),
-                        _StatBox(
-                          title: 'Total Fees',
-                          count: '${allPayments.fold<double>(0, (sum, p) => sum + (p.isVerified ? p.amount : 0)).toStringAsFixed(0)} ETB',
-                          color: Colors.amber.shade300,
-                          icon: Icons.payments_outlined,
+                        if (isMobile)
+                          Row(
+                            children: [
+                              _StatBox(
+                                title: 'Pending',
+                                count: '${pending.length}',
+                                color: Colors.orange.shade300,
+                                icon: Icons.hourglass_top,
+                              ),
+                              const SizedBox(width: 10),
+                              _StatBox(
+                                title: 'Verified',
+                                count: '${verified.length}',
+                                color: Colors.green.shade300,
+                                icon: Icons.check_circle_outline,
+                              ),
+                            ],
+                          )
+                        else
+                          Row(
+                            children: [
+                              _StatBox(
+                                title: 'Pending',
+                                count: '${pending.length}',
+                                color: Colors.orange.shade300,
+                                icon: Icons.hourglass_top,
+                              ),
+                              const SizedBox(width: 10),
+                              _StatBox(
+                                title: 'Verified',
+                                count: '${verified.length}',
+                                color: Colors.green.shade300,
+                                icon: Icons.check_circle_outline,
+                              ),
+                              const SizedBox(width: 10),
+                              _StatBox(
+                                title: 'Total Fees',
+                                count: '${allPayments.fold<double>(0, (sum, p) => sum + (p.isVerified ? p.amount : 0)).toStringAsFixed(0)} ETB',
+                                color: Colors.amber.shade300,
+                                icon: Icons.payments_outlined,
+                              ),
+                            ],
+                          ),
+                        if (isMobile)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: _StatBox(
+                              title: 'Total Fees',
+                              count: '${allPayments.fold<double>(0, (sum, p) => sum + (p.isVerified ? p.amount : 0)).toStringAsFixed(0)} ETB',
+                              color: Colors.amber.shade300,
+                              icon: Icons.payments_outlined,
+                            ),
+                          ),
+                        SizedBox(height: isMobile ? 10 : 12),
+                        // Search bar
+                        Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
+                            decoration: InputDecoration(
+                              hintText: 'Search by Ref ID, Title or Tourist ID...',
+                              prefixIcon: const Icon(Icons.search, size: 20),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear, size: 18),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _searchQuery = '');
+                                      },
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    // Search bar
-                    Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
-                        decoration: InputDecoration(
-                          hintText: 'Search by Ref ID, Title or Tourist ID...',
-                          prefixIcon: const Icon(Icons.search, size: 20),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 18),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                      ),
+                  ),
+
+                  // ── Tabs ──────────────────────────────────────────────────
+                  Container(
+                    color: Colors.teal.shade900,
+                    child: TabBar(
+                      controller: _tabController,
+                      indicatorColor: Colors.amber,
+                      indicatorWeight: 3,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: Colors.white70,
+                      labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      isScrollable: isMobile,
+                      tabs: [
+                        Tab(text: 'Pending (${pending.length})'),
+                        Tab(text: 'Verified (${verified.length})'),
+                        Tab(text: 'Rejected (${rejected.length})'),
+                        Tab(text: 'All (${allPayments.length})'),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
 
-              // ── Tabs ──────────────────────────────────────────────────
-              Container(
-                color: Colors.teal.shade900,
-                child: TabBar(
-                  controller: _tabController,
-                  indicatorColor: Colors.amber,
-                  indicatorWeight: 3,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white70,
-                  labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  tabs: [
-                    Tab(text: 'Pending (${pending.length})'),
-                    Tab(text: 'Verified (${verified.length})'),
-                    Tab(text: 'Rejected (${rejected.length})'),
-                    Tab(text: 'All (${allPayments.length})'),
-                  ],
-                ),
-              ),
-
-              // ── Tab Views ─────────────────────────────────────────────
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildPaymentList(pending, 'No pending entrance payments to verify 🎉'),
-                    _buildPaymentList(verified, 'No verified entrance payments yet'),
-                    _buildPaymentList(rejected, 'No rejected payments'),
-                    _buildPaymentList(allPayments, 'No entrance payment transactions found'),
-                  ],
-                ),
-              ),
-            ],
+                  // ── Tab Views ─────────────────────────────────────────────
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildPaymentList(pending, 'No pending entrance payments to verify 🎉'),
+                        _buildPaymentList(verified, 'No verified entrance payments yet'),
+                        _buildPaymentList(rejected, 'No rejected payments'),
+                        _buildPaymentList(allPayments, 'No entrance payment transactions found'),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
           );
         },
       ),
@@ -465,164 +501,190 @@ class _PaymentVerificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top Row: Item Title & Status Badge
-              Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+        
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 2,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(14),
+            child: Padding(
+              padding: EdgeInsets.all(isMobile ? 12 : 16),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.teal.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text('🇪🇹', style: TextStyle(fontSize: 20)),
+                  // Top Row: Item Title & Status Badge
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(isMobile ? 6 : 8),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text('🇪🇹', style: TextStyle(fontSize: isMobile ? 16 : 20)),
+                      ),
+                      SizedBox(width: isMobile ? 8 : 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              payment.title.isNotEmpty ? payment.title : 'Trip Entrance Fee',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 13 : 15),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(height: isMobile ? 2 : 4),
+                            Text(
+                              payment.payerName.isNotEmpty
+                                  ? 'Tourist: ${payment.payerName}'
+                                  : 'User ID: ${payment.userId.isNotEmpty ? payment.userId.substring(0, payment.userId.length > 8 ? 8 : payment.userId.length) : "Guest"}...',
+                              style: TextStyle(fontSize: isMobile ? 11 : 12, color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _StatusBadge(status: payment.status),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
+                  Divider(height: isMobile ? 16 : 20),
+
+                  // Middle: Method, Amount, Ref
+                  if (isMobile)
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          payment.title.isNotEmpty ? payment.title : 'Trip Entrance Fee',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          'Method: ${payment.formattedMethod}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                         ),
-                        const SizedBox(height: 2),
+                        SizedBox(height: 4),
                         Text(
-                          payment.payerName.isNotEmpty
-                              ? 'Tourist: ${payment.payerName}'
-                              : 'User ID: ${payment.userId.isNotEmpty ? payment.userId.substring(0, payment.userId.length > 8 ? 8 : payment.userId.length) : "Guest"}...',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          'Amount: ${payment.formattedAmount}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Ref: ${payment.transactionId.isNotEmpty ? payment.transactionId.substring(0, payment.transactionId.length > 12 ? 12 : payment.transactionId.length) : 'N/A'}',
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        ),
+                      ],
+                    )
+                  else
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Method: ${payment.formattedMethod}',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                            ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Text(
+                              'Ref: ${payment.transactionId}',
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontFamily: 'monospace'),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.copy, size: 14),
+                              tooltip: 'Copy Reference',
+                              padding: const EdgeInsets.all(4),
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: payment.transactionId));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Transaction Ref copied to clipboard')),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ),
-                  _StatusBadge(status: payment.status),
-                ],
-              ),
-              const Divider(height: 20),
-
-              // Middle: Method, Amount, Ref
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Method: ${payment.formattedMethod}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Text(
-                            'Ref: ${payment.transactionId}',
-                            style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontFamily: 'monospace'),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.copy, size: 14),
-                            tooltip: 'Copy Reference',
-                            padding: const EdgeInsets.all(4),
-                            constraints: const BoxConstraints(),
-                            onPressed: () {
-                              Clipboard.setData(ClipboardData(text: payment.transactionId));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Transaction Ref copied to clipboard')),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Text(
-                    payment.formattedAmount,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal.shade900,
-                    ),
-                  ),
-                ],
-              ),
-
-              if (payment.adminNotes != null && payment.adminNotes!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline, size: 14, color: Colors.red),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'Note: ${payment.adminNotes}',
-                          style: const TextStyle(fontSize: 11, color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-
-              // Bottom Actions (if pending)
-              if (payment.isPending) ...[
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red.shade700,
-                          side: BorderSide(color: Colors.red.shade300),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        icon: const Icon(Icons.close, size: 16),
-                        label: const Text('Reject', style: TextStyle(fontSize: 13)),
-                        onPressed: onReject,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade700,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        icon: const Icon(Icons.check, size: 16),
-                        label: const Text('Verify & Approve', style: TextStyle(fontSize: 13)),
-                        onPressed: onVerify,
+                    Text(
+                      payment.formattedAmount,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal.shade900,
                       ),
                     ),
                   ],
                 ),
+
+                if (payment.adminNotes != null && payment.adminNotes!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline, size: 14, color: Colors.red),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Note: ${payment.adminNotes}',
+                            style: const TextStyle(fontSize: 11, color: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Bottom Actions (if pending)
+                if (payment.isPending) ...[
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red.shade700,
+                            side: BorderSide(color: Colors.red.shade300),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          icon: const Icon(Icons.close, size: 16),
+                          label: const Text('Reject', style: TextStyle(fontSize: 13)),
+                          onPressed: onReject,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          icon: const Icon(Icons.check, size: 16),
+                          label: const Text('Verify & Approve', style: TextStyle(fontSize: 13)),
+                          onPressed: onVerify,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 

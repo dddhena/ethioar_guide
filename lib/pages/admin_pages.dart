@@ -148,189 +148,216 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
       title: widget.id != null ? 'Edit Landmark' : 'Add Landmark',
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Landmark name',
-                prefixIcon: Icon(Icons.place),
-              ),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _descriptionController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                prefixIcon: Icon(Icons.description),
-              ),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-            ),
-            const SizedBox(height: 12),
-            Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < 600;
+            
+            return ListView(
+              padding: EdgeInsets.all(isMobile ? 12 : 16),
               children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _cityController,
-                    decoration: const InputDecoration(
-                      labelText: 'City (e.g. Gondar, Lalibela)',
-                      prefixIcon: Icon(Icons.location_city),
-                    ),
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Landmark name',
+                    prefixIcon: Icon(Icons.place),
                   ),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _categoryController,
-                    decoration: const InputDecoration(
-                      labelText: 'Category (e.g. heritage, nature)',
-                      prefixIcon: Icon(Icons.category),
-                    ),
+                SizedBox(height: isMobile ? 10 : 12),
+                TextFormField(
+                  controller: _descriptionController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    prefixIcon: Icon(Icons.description),
                   ),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _entranceFeeController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Entrance / Admission Fee (ETB)',
-                hintText: 'e.g. 200 (or 0 for free entry)',
-                prefixIcon: Icon(Icons.confirmation_number_outlined),
-                suffixText: 'ETB',
-              ),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return null;
-                if (double.tryParse(v.trim()) == null) return 'Please enter a valid amount';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            // ── Photo / Image URL section ──────────────────────────
-            Text('Tourist Place Photo', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _imageUrlController,
-              decoration: InputDecoration(
-                labelText: 'Photo URL (http:// or https://)',
-                prefixIcon: const Icon(Icons.photo_camera),
-                suffixIcon: _imageUrlController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () => setState(() => _imageUrlController.clear()),
-                      )
-                    : null,
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 8),
-            if (_imageUrlController.text.trim().isNotEmpty)
-              Container(
-                height: 140,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Image.network(
-                  _imageUrlController.text.trim(),
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    color: Colors.grey.shade100,
-                    child: const Center(
-                      child: Text('Invalid image URL or cannot load preview', style: TextStyle(color: Colors.red, fontSize: 12)),
-                    ),
-                  ),
-                ),
-              ),
-            const SizedBox(height: 8),
-            const Text('Or pick a sample photo:', style: TextStyle(fontSize: 12, color: Colors.grey)),
-            const SizedBox(height: 4),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _sampleImages.map((sample) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ActionChip(
-                      avatar: const Icon(Icons.image, size: 16),
-                      label: Text(sample['title']!, style: const TextStyle(fontSize: 11)),
-                      onPressed: () {
-                        setState(() {
-                          _imageUrlController.text = sample['url']!;
-                        });
-                      },
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_locationPicked)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Selected location', style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
-                        Text('Latitude: ${_latitudeController.text}'),
-                        Text('Longitude: ${_longitudeController.text}'),
-                      ],
-                    ),
+                SizedBox(height: isMobile ? 10 : 12),
+                if (isMobile)
+                  Column(
+                    children: [
+                      TextFormField(
+                        controller: _cityController,
+                        decoration: const InputDecoration(
+                          labelText: 'City (e.g. Gondar, Lalibela)',
+                          prefixIcon: Icon(Icons.location_city),
+                        ),
+                      ),
+                      SizedBox(height: isMobile ? 10 : 12),
+                      TextFormField(
+                        controller: _categoryController,
+                        decoration: const InputDecoration(
+                          labelText: 'Category (e.g. heritage, nature)',
+                          prefixIcon: Icon(Icons.category),
+                        ),
+                      ),
+                    ],
                   )
                 else
-                  const Text('No location selected yet. Tap the button below to pick a place on the map.'),
-                const SizedBox(height: 8),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    LatLng? init;
-                    if (_locationPicked) {
-                      final lat = double.tryParse(_latitudeController.text);
-                      final lng = double.tryParse(_longitudeController.text);
-                      if (lat != null && lng != null) {
-                        init = LatLng(lat, lng);
-                      }
-                    }
-                    final result = await Navigator.of(context).push<LatLng>(
-                      MaterialPageRoute(
-                        builder: (_) => MapPickerPage(initialPosition: init),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _cityController,
+                          decoration: const InputDecoration(
+                            labelText: 'City (e.g. Gondar, Lalibela)',
+                            prefixIcon: Icon(Icons.location_city),
+                          ),
+                        ),
                       ),
-                    );
-                    if (result != null) {
-                      _latitudeController.text = result.latitude.toStringAsFixed(6);
-                      _longitudeController.text = result.longitude.toStringAsFixed(6);
-                      _locationPicked = true;
-                      if (mounted) setState(() {});
-                    }
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _categoryController,
+                          decoration: const InputDecoration(
+                            labelText: 'Category (e.g. heritage, nature)',
+                            prefixIcon: Icon(Icons.category),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                SizedBox(height: isMobile ? 10 : 12),
+                TextFormField(
+                  controller: _entranceFeeController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Entrance / Admission Fee (ETB)',
+                    hintText: 'e.g. 200 (or 0 for free entry)',
+                    prefixIcon: Icon(Icons.confirmation_number_outlined),
+                    suffixText: 'ETB',
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    if (double.tryParse(v.trim()) == null) return 'Please enter a valid amount';
+                    return null;
                   },
-                  icon: const Icon(Icons.map),
-                  label: Text(_locationPicked ? 'Change location on map' : 'Pick location on map'),
+                ),
+                SizedBox(height: isMobile ? 14 : 16),
+                // ── Photo / Image URL section ──────────────────────────
+                Text('Tourist Place Photo', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                SizedBox(height: isMobile ? 6 : 8),
+                TextFormField(
+                  controller: _imageUrlController,
+                  decoration: InputDecoration(
+                    labelText: 'Photo URL (http:// or https://)',
+                    prefixIcon: const Icon(Icons.photo_camera),
+                    suffixIcon: _imageUrlController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () => setState(() => _imageUrlController.clear()),
+                          )
+                        : null,
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                SizedBox(height: isMobile ? 6 : 8),
+                if (_imageUrlController.text.trim().isNotEmpty)
+                  Container(
+                    height: isMobile ? 120 : 140,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Image.network(
+                      _imageUrlController.text.trim(),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Container(
+                        color: Colors.grey.shade100,
+                        child: const Center(
+                          child: Text('Invalid image URL or cannot load preview', style: TextStyle(color: Colors.red, fontSize: 12)),
+                        ),
+                      ),
+                    ),
+                  ),
+                SizedBox(height: isMobile ? 6 : 8),
+                const Text('Or pick a sample photo:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                SizedBox(height: isMobile ? 4 : 6),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _sampleImages.map((sample) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ActionChip(
+                          avatar: const Icon(Icons.image, size: 16),
+                          label: Text(sample['title']!, style: const TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            setState(() {
+                              _imageUrlController.text = sample['url']!;
+                            });
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                SizedBox(height: isMobile ? 14 : 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_locationPicked)
+                      Container(
+                        padding: EdgeInsets.all(isMobile ? 10 : 12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Selected location', style: TextStyle(fontWeight: FontWeight.bold)),
+                            SizedBox(height: isMobile ? 3 : 4),
+                            Text('Latitude: ${_latitudeController.text}'),
+                            Text('Longitude: ${_longitudeController.text}'),
+                          ],
+                        ),
+                      )
+                    else
+                      const Text('No location selected yet. Tap the button below to pick a place on the map.'),
+                    SizedBox(height: isMobile ? 6 : 8),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        LatLng? init;
+                        if (_locationPicked) {
+                          final lat = double.tryParse(_latitudeController.text);
+                          final lng = double.tryParse(_longitudeController.text);
+                          if (lat != null && lng != null) {
+                            init = LatLng(lat, lng);
+                          }
+                        }
+                        final result = await Navigator.of(context).push<LatLng>(
+                          MaterialPageRoute(
+                            builder: (_) => MapPickerPage(initialPosition: init),
+                          ),
+                        );
+                        if (result != null) {
+                          _latitudeController.text = result.latitude.toStringAsFixed(6);
+                          _longitudeController.text = result.longitude.toStringAsFixed(6);
+                          _locationPicked = true;
+                          if (mounted) setState(() {});
+                        }
+                      },
+                      icon: const Icon(Icons.map),
+                      label: Text(_locationPicked ? 'Change location on map' : 'Pick location on map'),
+                    ),
+                  ],
+                ),
+                SizedBox(height: isMobile ? 18 : 20),
+                ElevatedButton.icon(
+                  onPressed: _saving ? null : _submit,
+                  icon: _saving
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.save),
+                  label: Text(_saving ? 'Saving...' : 'Save Landmark'),
                 ),
               ],
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _saving ? null : _submit,
-              icon: _saving
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.save),
-              label: Text(_saving ? 'Saving...' : 'Save Landmark'),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -379,45 +406,111 @@ class _AdminPageState extends State<AdminPage> {
       title: 'Manage Users & Roles',
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: _users.length,
-              itemBuilder: (context, i) {
-                final u = _users[i];
-                final currentRole = _normalizeRole(u['role'] as String?);
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.teal.shade50,
-                      child: Text(
-                        ((u['name'] as String?) ?? (u['email'] as String?) ?? 'U')
-                            .substring(0, 1)
-                            .toUpperCase(),
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.teal.shade800),
-                      ),
-                    ),
-                    title: Text(
-                      (u['name'] as String?)?.isNotEmpty == true
-                          ? u['name']
-                          : (u['email'] ?? 'Unknown'),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(u['email'] ?? ''),
-                    trailing: DropdownButton<String>(
-                      value: currentRole,
-                      underline: const SizedBox(),
-                      items: const [
-                        DropdownMenuItem(value: 'tourist',    child: Text('🧭 Tourist')),
-                        DropdownMenuItem(value: 'tour_guide', child: Text('🗺️ Tour Guide')),
-                        DropdownMenuItem(value: 'provider',   child: Text('🏢 Provider')),
-                        DropdownMenuItem(value: 'admin',      child: Text('👑 Admin')),
-                      ],
-                      onChanged: (v) async {
-                        if (v != null) await _setRole(u['uid'] as String, v);
-                      },
-                    ),
-                  ),
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 600;
+                
+                return ListView.builder(
+                  itemCount: _users.length,
+                  itemBuilder: (context, i) {
+                    final u = _users[i];
+                    final currentRole = _normalizeRole(u['role'] as String?);
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      child: isMobile
+                          ? Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      CircleAvatar(
+                                        backgroundColor: Colors.teal.shade50,
+                                        child: Text(
+                                          ((u['name'] as String?) ?? (u['email'] as String?) ?? 'U')
+                                              .substring(0, 1)
+                                              .toUpperCase(),
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold, color: Colors.teal.shade800),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              (u['name'] as String?)?.isNotEmpty == true
+                                                  ? u['name']
+                                                  : (u['email'] ?? 'Unknown'),
+                                              style: const TextStyle(fontWeight: FontWeight.bold),
+                                            ),
+                                            Text(
+                                              u['email'] ?? '',
+                                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  DropdownButtonFormField<String>(
+                                    value: currentRole,
+                                    decoration: InputDecoration(
+                                      labelText: 'Role',
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                      isDense: true,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(value: 'tourist',    child: Text('🧭 Tourist')),
+                                      DropdownMenuItem(value: 'tour_guide', child: Text('🗺️ Tour Guide')),
+                                      DropdownMenuItem(value: 'provider',   child: Text('🏢 Provider')),
+                                      DropdownMenuItem(value: 'admin',      child: Text('👑 Admin')),
+                                    ],
+                                    onChanged: (v) async {
+                                      if (v != null) await _setRole(u['uid'] as String, v);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.teal.shade50,
+                                child: Text(
+                                  ((u['name'] as String?) ?? (u['email'] as String?) ?? 'U')
+                                      .substring(0, 1)
+                                      .toUpperCase(),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold, color: Colors.teal.shade800),
+                                ),
+                              ),
+                              title: Text(
+                                (u['name'] as String?)?.isNotEmpty == true
+                                    ? u['name']
+                                    : (u['email'] ?? 'Unknown'),
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(u['email'] ?? ''),
+                              trailing: DropdownButton<String>(
+                                value: currentRole,
+                                underline: const SizedBox(),
+                                items: const [
+                                  DropdownMenuItem(value: 'tourist',    child: Text('🧭 Tourist')),
+                                  DropdownMenuItem(value: 'tour_guide', child: Text('🗺️ Tour Guide')),
+                                  DropdownMenuItem(value: 'provider',   child: Text('🏢 Provider')),
+                                  DropdownMenuItem(value: 'admin',      child: Text('👑 Admin')),
+                                ],
+                                onChanged: (v) async {
+                                  if (v != null) await _setRole(u['uid'] as String, v);
+                                },
+                              ),
+                            ),
+                    );
+                  },
                 );
               },
             ),

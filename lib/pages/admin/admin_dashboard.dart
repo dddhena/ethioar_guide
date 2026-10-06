@@ -111,18 +111,114 @@ class _AdminDashboardState extends State<AdminDashboard> {
       builder: (context, _) {
         return Scaffold(
           backgroundColor: _contentBg,
-          body: Row(
-            children: [
-              // Sidebar: STRICTLY DARK GREEN PRESERVED (Not affected by light/dark theme)
-              _buildSidebar(),
-              // Main content: Fully Theme-Adaptive
-              Expanded(
-                child: _buildMainContent(),
-              ),
-            ],
+          drawer: _buildMobileDrawer(),
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 768) {
+                // Mobile layout
+                return _buildMainContent();
+              } else {
+                // Desktop layout with sidebar
+                return Row(
+                  children: [
+                    // Sidebar: STRICTLY DARK GREEN PRESERVED (Not affected by light/dark theme)
+                    _buildSidebar(),
+                    // Main content: Fully Theme-Adaptive
+                    Expanded(
+                      child: _buildMainContent(),
+                    ),
+                  ],
+                );
+              }
+            },
           ),
         );
       },
+    );
+  }
+
+  Widget _buildMobileDrawer() {
+    return Drawer(
+      child: Container(
+        color: const Color(0xFF1B4D3E), // Dark green
+        child: Column(
+          children: [
+            // Logo section
+            _buildSidebarHeader(),
+            // Navigation items
+            Expanded(
+              child: ListView(
+                children: [
+                  _buildDrawerNavItem(
+                    icon: Icons.dashboard,
+                    label: 'Dashboard',
+                    index: 0,
+                    isSelected: _selectedIndex == 0,
+                  ),
+                  const Divider(color: Colors.white24),
+                  _buildDrawerSectionHeader('MANAGEMENT'),
+                  _buildDrawerNavItem(
+                    icon: Icons.people,
+                    label: 'Users & Roles',
+                    index: 1,
+                  ),
+                  _buildDrawerNavItem(
+                    icon: Icons.business,
+                    label: 'Service Providers',
+                    index: 2,
+                  ),
+                  _buildDrawerNavItem(
+                    icon: Icons.payment,
+                    label: 'Entrance Payments',
+                    index: 3,
+                  ),
+                  _buildDrawerNavItem(
+                    icon: Icons.location_on,
+                    label: 'Landmarks',
+                    index: 4,
+                  ),
+                  _buildDrawerNavItem(
+                    icon: Icons.book,
+                    label: 'Bookings',
+                    index: 5,
+                  ),
+                  const Divider(color: Colors.white24),
+                  _buildDrawerSectionHeader('COMMUNICATION'),
+                  _buildDrawerNavItem(
+                    icon: Icons.support_agent,
+                    label: 'Support Desk',
+                    index: 6,
+                  ),
+                  _buildDrawerNavItem(
+                    icon: Icons.message,
+                    label: 'Messages',
+                    index: 7,
+                  ),
+                  const Divider(color: Colors.white24),
+                  _buildDrawerSectionHeader('SYSTEM'),
+                  _buildDrawerNavItem(
+                    icon: Icons.analytics,
+                    label: 'Reports & Analytics',
+                    index: 8,
+                  ),
+                  _buildDrawerNavItem(
+                    icon: Icons.settings_suggest,
+                    label: 'System Configuration',
+                    index: 9,
+                  ),
+                  _buildDrawerNavItem(
+                    icon: Icons.history,
+                    label: 'Activity Logs',
+                    index: 10,
+                  ),
+                ],
+              ),
+            ),
+            // User profile section
+            _buildUserProfile(),
+          ],
+        ),
+      ),
     );
   }
 
@@ -268,6 +364,51 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             )
           : const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildDrawerSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.white54,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.0,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerNavItem({
+    required IconData icon,
+    required String label,
+    required int index,
+    bool isSelected = false,
+  }) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: isSelected ? Colors.white : Colors.white70,
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Colors.white70,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      selected: isSelected,
+      selectedTileColor: const Color(0xFF9CCC65),
+      onTap: () {
+        setState(() {
+          _selectedIndex = index;
+        });
+        Navigator.of(context).pop(); // Close drawer
+        _navigateToPage(index);
+      },
     );
   }
 
@@ -462,88 +603,108 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildTopNavBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: _cardBg,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 768;
+        
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 12 : 20,
+            vertical: isMobile ? 12 : 16,
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(Icons.menu, color: _textPrimary),
-            onPressed: () {
-              setState(() {
-                _sidebarExpanded = !_sidebarExpanded;
-              });
-            },
-          ),
-          const SizedBox(width: 16),
-          Text(
-            _getPageTitle(),
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: _textPrimary,
-            ),
-          ),
-          const Spacer(),
-          // Search bar
-          Container(
-            width: 300,
-            height: 40,
-            decoration: BoxDecoration(
-              color: _cardSubBg,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: TextField(
-              style: TextStyle(color: _textPrimary, fontSize: 13),
-              decoration: InputDecoration(
-                hintText: 'Search...',
-                hintStyle: TextStyle(color: _isDark ? Colors.white38 : Colors.grey),
-                prefixIcon: Icon(Icons.search, color: _isDark ? Colors.white54 : Colors.grey),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: _cardBg,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 12),
-          // Theme Toggle Button
-          IconButton(
-            icon: Icon(
-              _isDark ? Icons.light_mode : Icons.dark_mode,
-              color: _isDark ? Colors.amber : Colors.grey.shade700,
-            ),
-            tooltip: _isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
-            onPressed: () => _themeService.toggleTheme(),
+          child: Row(
+            children: [
+              if (isMobile)
+                Builder(
+                  builder: (context) => IconButton(
+                    icon: Icon(Icons.menu, color: _textPrimary),
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                  ),
+                )
+              else
+                IconButton(
+                  icon: Icon(Icons.menu, color: _textPrimary),
+                  onPressed: () {
+                    setState(() {
+                      _sidebarExpanded = !_sidebarExpanded;
+                    });
+                  },
+                ),
+              if (!isMobile) const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  _getPageTitle(),
+                  style: TextStyle(
+                    fontSize: isMobile ? 18 : 20,
+                    fontWeight: FontWeight.bold,
+                    color: _textPrimary,
+                  ),
+                ),
+              ),
+              if (!isMobile) const Spacer(),
+              // Search bar - hide on mobile or make compact
+              if (!isMobile)
+                Container(
+                  width: 300,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: _cardSubBg,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: TextField(
+                    style: TextStyle(color: _textPrimary, fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Search...',
+                      hintStyle: TextStyle(color: _isDark ? Colors.white38 : Colors.grey),
+                      prefixIcon: Icon(Icons.search, color: _isDark ? Colors.white54 : Colors.grey),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    ),
+                  ),
+                ),
+              if (!isMobile) const SizedBox(width: 12),
+              // Theme Toggle Button
+              IconButton(
+                icon: Icon(
+                  _isDark ? Icons.light_mode : Icons.dark_mode,
+                  color: _isDark ? Colors.amber : Colors.grey.shade700,
+                ),
+                tooltip: _isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                onPressed: () => _themeService.toggleTheme(),
+              ),
+              if (!isMobile) const SizedBox(width: 4),
+              IconButton(
+                icon: Icon(Icons.message_outlined, color: _isDark ? Colors.white70 : Colors.black54),
+                onPressed: () => _navigateToPage(7),
+              ),
+              IconButton(
+                icon: Icon(Icons.notifications_outlined, color: _isDark ? Colors.white70 : Colors.black54),
+                onPressed: () {},
+              ),
+              const SizedBox(width: 8),
+              CircleAvatar(
+                radius: isMobile ? 16 : 20,
+                backgroundColor: EthioColors.forest,
+                child: Icon(
+                  Icons.person,
+                  color: Colors.white,
+                  size: isMobile ? 16 : 20,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 4),
-          IconButton(
-            icon: Icon(Icons.message_outlined, color: _isDark ? Colors.white70 : Colors.black54),
-            onPressed: () => _navigateToPage(7),
-          ),
-          IconButton(
-            icon: Icon(Icons.notifications_outlined, color: _isDark ? Colors.white70 : Colors.black54),
-            onPressed: () {},
-          ),
-          const SizedBox(width: 8),
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: EthioColors.forest,
-            child: const Icon(
-              Icons.person,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -582,125 +743,222 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildDashboardContent() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Emergency SOS banner
-          _buildEmergencyBanner(),
-          const SizedBox(height: 24),
-          
-          // Summary cards
-          _buildSummaryCards(),
-          const SizedBox(height: 24),
-          
-          // Charts section
-          Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 768;
+        final isTablet = constraints.maxWidth < 1024;
+        
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(isMobile ? 12 : 24),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                flex: 2,
-                child: _buildPlatformOverviewChart(),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: _buildBookingsStatusChart(),
-              ),
+              // Emergency SOS banner
+              _buildEmergencyBanner(),
+              SizedBox(height: isMobile ? 16 : 24),
+              
+              // Summary cards
+              _buildSummaryCards(isMobile: isMobile),
+              SizedBox(height: isMobile ? 16 : 24),
+              
+              // Charts section
+              if (isMobile)
+                Column(
+                  children: [
+                    _buildPlatformOverviewChart(),
+                    SizedBox(height: 16),
+                    _buildBookingsStatusChart(),
+                  ],
+                )
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: _buildPlatformOverviewChart(),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: _buildBookingsStatusChart(),
+                    ),
+                  ],
+                ),
+              SizedBox(height: isMobile ? 16 : 24),
+              
+              // Alerts and quick actions
+              if (isMobile)
+                Column(
+                  children: [
+                    _buildRecentAlerts(),
+                    SizedBox(height: 16),
+                    _buildQuickActions(),
+                  ],
+                )
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildRecentAlerts(),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: _buildQuickActions(),
+                    ),
+                  ],
+                ),
+              SizedBox(height: isMobile ? 16 : 24),
+              
+              // Recent bookings table
+              _buildRecentBookingsTable(),
+              SizedBox(height: isMobile ? 16 : 24),
+              
+              // Recent activities
+              _buildRecentActivities(),
             ],
           ),
-          const SizedBox(height: 24),
-          
-          // Alerts and quick actions
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _buildRecentAlerts(),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: _buildQuickActions(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          
-          // Recent bookings table
-          _buildRecentBookingsTable(),
-          const SizedBox(height: 24),
-          
-          // Recent activities
-          _buildRecentActivities(),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildEmergencyBanner() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.red.shade600, Colors.red.shade800],
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.emergency,
-                color: Colors.white,
-                size: 32,
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Live Emergency SOS Monitor',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  StreamBuilder<List<EmergencyAlert>>(
-                    stream: _emergencyService.getEmergenciesStream(),
-                    builder: (context, snapshot) {
-                      final activeCount = snapshot.data?.where((e) => e.isActive).length ?? 0;
-                      return Text(
-                        'Active alerts: $activeCount',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.red.shade800,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 768;
+        
+        return Container(
+          padding: EdgeInsets.all(isMobile ? 16 : 20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.red.shade600, Colors.red.shade800],
             ),
-            onPressed: () => _navigateToEmergencyMonitor(),
-            child: const Text('View Live Monitor'),
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
-      ),
+          child: isMobile
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.emergency,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Live Emergency SOS Monitor',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    StreamBuilder<List<EmergencyAlert>>(
+                      stream: _emergencyService.getEmergenciesStream(),
+                      builder: (context, snapshot) {
+                        final activeCount = snapshot.data?.where((e) => e.isActive).length ?? 0;
+                        return Text(
+                          'Active alerts: $activeCount',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.red.shade800,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () => _navigateToEmergencyMonitor(),
+                        child: const Text('View Live Monitor'),
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.emergency,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                        const SizedBox(width: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Live Emergency SOS Monitor',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            StreamBuilder<List<EmergencyAlert>>(
+                              stream: _emergencyService.getEmergenciesStream(),
+                              builder: (context, snapshot) {
+                                final activeCount = snapshot.data?.where((e) => e.isActive).length ?? 0;
+                                return Text(
+                                  'Active alerts: $activeCount',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.red.shade800,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      onPressed: () => _navigateToEmergencyMonitor(),
+                      child: const Text('View Live Monitor'),
+                    ),
+                  ],
+                ),
+        );
+      },
     );
   }
 
-  Widget _buildSummaryCards() {
+  Widget _buildSummaryCards({bool isMobile = false}) {
     if (_loadingStats) {
+      if (isMobile) {
+        return Column(
+          children: [
+            _buildLoadingSummaryCard(),
+            const SizedBox(height: 12),
+            _buildLoadingSummaryCard(),
+            const SizedBox(height: 12),
+            _buildLoadingSummaryCard(),
+            const SizedBox(height: 12),
+            _buildLoadingSummaryCard(),
+          ],
+        );
+      }
       return Row(
         children: [
           Expanded(child: _buildLoadingSummaryCard()),
@@ -714,48 +972,55 @@ class _AdminDashboardState extends State<AdminDashboard> {
       );
     }
     
+    final cards = [
+      _buildSummaryCard(
+        title: 'Total Users',
+        value: '$_totalUsers',
+        change: '+12.5%',
+        icon: Icons.people,
+        color: Colors.blue,
+      ),
+      _buildSummaryCard(
+        title: 'Service Providers',
+        value: '$_serviceProviders',
+        change: '+8.2%',
+        icon: Icons.business,
+        color: Colors.green,
+      ),
+      _buildSummaryCard(
+        title: 'Entrance Payments',
+        value: '${_entrancePayments.toStringAsFixed(0)} ETB',
+        change: '+15.3%',
+        icon: Icons.payment,
+        color: Colors.orange,
+      ),
+      _buildSummaryCard(
+        title: 'Total Landmarks',
+        value: '$_totalLandmarks',
+        change: '+5.1%',
+        icon: Icons.location_on,
+        color: Colors.purple,
+      ),
+    ];
+    
+    if (isMobile) {
+      return Column(
+        children: cards.map((card) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: card,
+          );
+        }).toList(),
+      );
+    }
+    
     return Row(
-      children: [
-        Expanded(
-          child: _buildSummaryCard(
-            title: 'Total Users',
-            value: '$_totalUsers',
-            change: '+12.5%',
-            icon: Icons.people,
-            color: Colors.blue,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildSummaryCard(
-            title: 'Service Providers',
-            value: '$_serviceProviders',
-            change: '+8.2%',
-            icon: Icons.business,
-            color: Colors.green,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildSummaryCard(
-            title: 'Entrance Payments',
-            value: '${_entrancePayments.toStringAsFixed(0)} ETB',
-            change: '+15.3%',
-            icon: Icons.payment,
-            color: Colors.orange,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildSummaryCard(
-            title: 'Total Landmarks',
-            value: '$_totalLandmarks',
-            change: '+5.1%',
-            icon: Icons.location_on,
-            color: Colors.purple,
-          ),
-        ),
-      ],
+      children: cards.map((card) {
+        return Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: Expanded(child: card),
+        );
+      }).toList(),
     );
   }
 
@@ -1164,46 +1429,52 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildQuickActions() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _cardBg,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Quick Actions',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: _textPrimary,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _buildQuickActionButton('Support Desk', Icons.support_agent, () => _navigateToPage(6)),
-              _buildQuickActionButton('Manage Users', Icons.people, () => _navigateToPage(1)),
-              _buildQuickActionButton('Verify Providers', Icons.verified, () => _navigateToPage(2)),
-              _buildQuickActionButton('Entrance Payments', Icons.payment, () => _navigateToPage(3)),
-              _buildQuickActionButton('System Configuration', Icons.settings_suggest, () => _navigateToPage(9)),
-              _buildQuickActionButton('Add Landmark', Icons.add_location, () => _navigateToPage(4)),
-              _buildQuickActionButton('View Reports', Icons.analytics, () => _navigateToPage(8)),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 768;
+        
+        return Container(
+          padding: EdgeInsets.all(isMobile ? 16 : 20),
+          decoration: BoxDecoration(
+            color: _cardBg,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
             ],
           ),
-        ],
-      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Quick Actions',
+                style: TextStyle(
+                  fontSize: isMobile ? 16 : 18,
+                  fontWeight: FontWeight.bold,
+                  color: _textPrimary,
+                ),
+              ),
+              SizedBox(height: isMobile ? 12 : 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildQuickActionButton('Support Desk', Icons.support_agent, () => _navigateToPage(6)),
+                  _buildQuickActionButton('Manage Users', Icons.people, () => _navigateToPage(1)),
+                  _buildQuickActionButton('Verify Providers', Icons.verified, () => _navigateToPage(2)),
+                  _buildQuickActionButton('Entrance Payments', Icons.payment, () => _navigateToPage(3)),
+                  _buildQuickActionButton('System Configuration', Icons.settings_suggest, () => _navigateToPage(9)),
+                  _buildQuickActionButton('Add Landmark', Icons.add_location, () => _navigateToPage(4)),
+                  _buildQuickActionButton('View Reports', Icons.analytics, () => _navigateToPage(8)),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1222,95 +1493,175 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildRecentBookingsTable() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _cardBg,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Recent Bookings',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: _textPrimary,
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 768;
+        
+        return Container(
+          padding: EdgeInsets.all(isMobile ? 16 : 20),
+          decoration: BoxDecoration(
+            color: _cardBg,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
-              if (!_loadingStats)
-                TextButton.icon(
-                  icon: Icon(Icons.refresh, size: 16, color: _textPrimary),
-                  label: Text('Refresh', style: TextStyle(color: _textPrimary)),
-                  onPressed: _loadStatistics,
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Recent Bookings',
+                    style: TextStyle(
+                      fontSize: isMobile ? 16 : 18,
+                      fontWeight: FontWeight.bold,
+                      color: _textPrimary,
+                    ),
+                  ),
+                  if (!_loadingStats)
+                    TextButton.icon(
+                      icon: Icon(Icons.refresh, size: 16, color: _textPrimary),
+                      label: Text('Refresh', style: TextStyle(color: _textPrimary)),
+                      onPressed: _loadStatistics,
+                    ),
+                ],
+              ),
+              SizedBox(height: isMobile ? 12 : 16),
+              if (_loadingStats)
+                const Center(child: CircularProgressIndicator())
+              else if (_recentBookings.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      children: [
+                        Icon(Icons.inbox_outlined, size: 48, color: _textSecondary),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No recent bookings',
+                          style: TextStyle(color: _textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (isMobile)
+                // Mobile: Show as cards instead of table
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _recentBookings.length,
+                  itemBuilder: (context, index) {
+                    final booking = _recentBookings[index];
+                    final bookingId = booking['id'] as String? ?? 'Unknown';
+                    final touristName = booking['touristName'] as String? ?? 'Unknown';
+                    final tourName = booking['tourName'] as String? ?? 'Service';
+                    final tourDate = booking['tourDate'] is DateTime 
+                        ? (booking['tourDate'] as DateTime).toString().split(' ')[0]
+                        : booking['tourDate']?.toString() ?? 'Unknown';
+                    final status = booking['status'] as String? ?? 'pending';
+                    final amount = booking['totalAmount'] as num? ?? 0;
+                    
+                    Color statusColor;
+                    switch (status.toLowerCase()) {
+                      case 'confirmed':
+                        statusColor = Colors.green;
+                        break;
+                      case 'pending':
+                        statusColor = Colors.orange;
+                        break;
+                      case 'cancelled':
+                        statusColor = Colors.red;
+                        break;
+                      default:
+                        statusColor = Colors.grey;
+                    }
+                    
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  touristName,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    status.toUpperCase(),
+                                    style: TextStyle(
+                                      color: statusColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text('Service: $tourName', style: TextStyle(color: _textSecondary, fontSize: 12)),
+                            Text('Date: $tourDate', style: TextStyle(color: _textSecondary, fontSize: 12)),
+                            Text('Amount: ${amount.toStringAsFixed(0)} ETB', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                )
+              else
+                // Desktop: Show as table
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    columns: [
+                      DataColumn(label: Text('Booking ID', style: TextStyle(color: _textPrimary))),
+                      DataColumn(label: Text('User', style: TextStyle(color: _textPrimary))),
+                      DataColumn(label: Text('Service', style: TextStyle(color: _textPrimary))),
+                      DataColumn(label: Text('Date', style: TextStyle(color: _textPrimary))),
+                      DataColumn(label: Text('Status', style: TextStyle(color: _textPrimary))),
+                      DataColumn(label: Text('Amount', style: TextStyle(color: _textPrimary))),
+                    ],
+                    rows: _recentBookings.map((booking) {
+                      final bookingId = booking['id'] as String? ?? 'Unknown';
+                      final touristName = booking['touristName'] as String? ?? 'Unknown';
+                      final tourName = booking['tourName'] as String? ?? 'Service';
+                      final tourDate = booking['tourDate'] is DateTime 
+                          ? (booking['tourDate'] as DateTime).toString().split(' ')[0]
+                          : booking['tourDate']?.toString() ?? 'Unknown';
+                      final status = booking['status'] as String? ?? 'pending';
+                      final amount = booking['totalAmount'] as num? ?? 0;
+                      
+                      return _buildDataRow(
+                        bookingId.substring(0, bookingId.length > 8 ? 8 : bookingId.length),
+                        touristName,
+                        tourName,
+                        tourDate,
+                        status,
+                        '${amount.toStringAsFixed(0)} ETB',
+                      );
+                    }).toList(),
+                  ),
                 ),
             ],
           ),
-          const SizedBox(height: 16),
-          if (_loadingStats)
-            const Center(child: CircularProgressIndicator())
-          else if (_recentBookings.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  children: [
-                    Icon(Icons.inbox_outlined, size: 48, color: _textSecondary),
-                    const SizedBox(height: 12),
-                    Text(
-                      'No recent bookings',
-                      style: TextStyle(color: _textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: [
-                  DataColumn(label: Text('Booking ID', style: TextStyle(color: _textPrimary))),
-                  DataColumn(label: Text('User', style: TextStyle(color: _textPrimary))),
-                  DataColumn(label: Text('Service', style: TextStyle(color: _textPrimary))),
-                  DataColumn(label: Text('Date', style: TextStyle(color: _textPrimary))),
-                  DataColumn(label: Text('Status', style: TextStyle(color: _textPrimary))),
-                  DataColumn(label: Text('Amount', style: TextStyle(color: _textPrimary))),
-                ],
-                rows: _recentBookings.map((booking) {
-                  final bookingId = booking['id'] as String? ?? 'Unknown';
-                  final touristName = booking['touristName'] as String? ?? 'Unknown';
-                  final tourName = booking['tourName'] as String? ?? 'Service';
-                  final tourDate = booking['tourDate'] is DateTime 
-                      ? (booking['tourDate'] as DateTime).toString().split(' ')[0]
-                      : booking['tourDate']?.toString() ?? 'Unknown';
-                  final status = booking['status'] as String? ?? 'pending';
-                  final amount = booking['totalAmount'] as num? ?? 0;
-                  
-                  return _buildDataRow(
-                    bookingId.substring(0, bookingId.length > 8 ? 8 : bookingId.length),
-                    touristName,
-                    tourName,
-                    tourDate,
-                    status,
-                    '${amount.toStringAsFixed(0)} ETB',
-                  );
-                }).toList(),
-              ),
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 

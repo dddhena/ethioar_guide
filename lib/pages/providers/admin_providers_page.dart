@@ -49,38 +49,95 @@ class _AdminProvidersPageState extends State<AdminProvidersPage> {
           ? const Center(child: CircularProgressIndicator())
           : _providers.isEmpty
               ? const Center(child: Text('No service providers found.'))
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: _providers.length,
-                  itemBuilder: (context, i) {
-                    final p = _providers[i];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 6),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.teal.shade50,
-                          child: Text(p.typeIcon, style: const TextStyle(fontSize: 22)),
-                        ),
-                        title: Text(p.businessName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('${p.typeDisplayName} • ${p.city} • Status: ${p.approvalStatus.toUpperCase()}'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (!p.isApproved)
-                              IconButton(
-                                icon: const Icon(Icons.check_circle, color: Colors.green),
-                                tooltip: 'Approve Provider',
-                                onPressed: () => _updateStatus(p.id, 'approved'),
-                              ),
-                            if (p.approvalStatus != 'rejected')
-                              IconButton(
-                                icon: const Icon(Icons.cancel, color: Colors.red),
-                                tooltip: 'Reject Provider',
-                                onPressed: () => _updateStatus(p.id, 'rejected'),
-                              ),
-                          ],
-                        ),
-                      ),
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isMobile = constraints.maxWidth < 600;
+                    
+                    return ListView.builder(
+                      padding: EdgeInsets.symmetric(vertical: isMobile ? 6 : 8),
+                      itemCount: _providers.length,
+                      itemBuilder: (context, i) {
+                        final p = _providers[i];
+                        return Card(
+                          margin: EdgeInsets.symmetric(vertical: isMobile ? 4 : 6),
+                          child: isMobile
+                              ? Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          CircleAvatar(
+                                            backgroundColor: Colors.teal.shade50,
+                                            child: Text(p.typeIcon, style: const TextStyle(fontSize: 20)),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(p.businessName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                Text('${p.typeDisplayName} • ${p.city}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                                Text('Status: ${p.approvalStatus.toUpperCase()}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          if (!p.isApproved)
+                                            Expanded(
+                                              child: OutlinedButton.icon(
+                                                icon: const Icon(Icons.check_circle, size: 16),
+                                                label: const Text('Approve', style: TextStyle(fontSize: 12)),
+                                                onPressed: () => _updateStatus(p.id, 'approved'),
+                                              ),
+                                            ),
+                                          if (!p.isApproved && p.approvalStatus != 'rejected')
+                                            const SizedBox(width: 8),
+                                          if (p.approvalStatus != 'rejected')
+                                            Expanded(
+                                              child: OutlinedButton.icon(
+                                                icon: const Icon(Icons.cancel, size: 16),
+                                                label: const Text('Reject', style: TextStyle(fontSize: 12)),
+                                                onPressed: () => _updateStatus(p.id, 'rejected'),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: Colors.teal.shade50,
+                                    child: Text(p.typeIcon, style: const TextStyle(fontSize: 22)),
+                                  ),
+                                  title: Text(p.businessName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  subtitle: Text('${p.typeDisplayName} • ${p.city} • Status: ${p.approvalStatus.toUpperCase()}'),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (!p.isApproved)
+                                        IconButton(
+                                          icon: const Icon(Icons.check_circle, color: Colors.green),
+                                          tooltip: 'Approve Provider',
+                                          onPressed: () => _updateStatus(p.id, 'approved'),
+                                        ),
+                                      if (p.approvalStatus != 'rejected')
+                                        IconButton(
+                                          icon: const Icon(Icons.cancel, color: Colors.red),
+                                          tooltip: 'Reject Provider',
+                                          onPressed: () => _updateStatus(p.id, 'rejected'),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                        );
+                      },
                     );
                   },
                 ),

@@ -175,108 +175,144 @@ class _AdminEmergencyDashboardState extends State<AdminEmergencyDashboard> {
                       badgeLabel = 'RESOLVED 🟢';
                     }
 
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 6),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        side: BorderSide(color: a.isActive ? Colors.red.shade400 : Colors.grey.shade300, width: a.isActive ? 2 : 1),
-                      ),
-                      elevation: a.isActive ? 4 : 1,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isMobile = constraints.maxWidth < 600;
+                        
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            side: BorderSide(color: a.isActive ? Colors.red.shade400 : Colors.grey.shade300, width: a.isActive ? 2 : 1),
+                          ),
+                          elevation: a.isActive ? 4 : 1,
+                          child: Padding(
+                            padding: EdgeInsets.all(isMobile ? 12 : 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(a.typeLabel, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                    Expanded(
+                                      child: Text(
+                                        a.typeLabel,
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 14 : 16),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: badgeBg,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        badgeLabel,
+                                        style: TextStyle(color: badgeColor, fontWeight: FontWeight.bold, fontSize: 10),
+                                      ),
+                                    ),
                                   ],
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: badgeBg,
-                                    borderRadius: BorderRadius.circular(8),
+                                SizedBox(height: isMobile ? 6 : 8),
+                                Text('Tourist: ${a.touristName} (${a.touristPhone.isNotEmpty ? a.touristPhone : a.touristEmail})', style: TextStyle(fontWeight: FontWeight.w600, fontSize: isMobile ? 11 : 13)),
+                                SizedBox(height: isMobile ? 3 : 4),
+                                Text('Emergency Note: "${a.message}"', style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey.shade800, fontSize: isMobile ? 11 : 13)),
+                                SizedBox(height: isMobile ? 3 : 4),
+                                Text('GPS: ${a.latitude.toStringAsFixed(5)}, ${a.longitude.toStringAsFixed(5)} • Reported: ${a.timeAgo}', style: TextStyle(fontSize: isMobile ? 10 : 12, color: Colors.grey.shade600)),
+                                Divider(height: isMobile ? 14 : 18),
+
+                                // Actions
+                                if (isMobile)
+                                  Column(
+                                    children: [
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: OutlinedButton.icon(
+                                          icon: const Icon(Icons.map, size: 16),
+                                          label: const Text('View GPS on Map', style: TextStyle(fontSize: 12)),
+                                          onPressed: () => _openInGoogleMaps(a.latitude, a.longitude),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: OutlinedButton.icon(
+                                          icon: const Icon(Icons.chat, size: 16),
+                                          label: const Text('Message', style: TextStyle(fontSize: 12)),
+                                          onPressed: () => _messageTourist(a),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                else
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      OutlinedButton.icon(
+                                        icon: const Icon(Icons.map, size: 16),
+                                        label: const Text('View GPS on Map', style: TextStyle(fontSize: 12)),
+                                        onPressed: () => _openInGoogleMaps(a.latitude, a.longitude),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      OutlinedButton.icon(
+                                        icon: const Icon(Icons.chat, size: 16),
+                                        label: const Text('Message', style: TextStyle(fontSize: 12)),
+                                        onPressed: () => _messageTourist(a),
+                                      ),
+                                    ],
                                   ),
-                                  child: Text(
-                                    badgeLabel,
-                                    style: TextStyle(color: badgeColor, fontWeight: FontWeight.bold, fontSize: 11),
+                                SizedBox(height: isMobile ? 6 : 8),
+
+                                // Response state workflow
+                                if (a.isActive)
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.orange.shade800,
+                                        foregroundColor: Colors.white,
+                                        minimumSize: Size.fromHeight(isMobile ? 36 : 38),
+                                      ),
+                                      icon: const Icon(Icons.directions_run),
+                                      label: const Text('Dispatch / Mark as Responding'),
+                                      onPressed: () async {
+                                        await _emergencyService.updateEmergencyStatus(
+                                          a.id,
+                                          'responding',
+                                          responderId: admin?.uid,
+                                          responderName: admin?.displayName ?? 'Admin Team',
+                                        );
+                                        if (context.mounted) SnackbarHelper.show(context, 'Status updated: Responding');
+                                      },
+                                    ),
                                   ),
-                                ),
+                                if (a.isResponding)
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green.shade700,
+                                        foregroundColor: Colors.white,
+                                        minimumSize: Size.fromHeight(isMobile ? 36 : 38),
+                                      ),
+                                      icon: const Icon(Icons.check_circle),
+                                      label: const Text('Mark Emergency as Resolved'),
+                                      onPressed: () async {
+                                        await _emergencyService.updateEmergencyStatus(
+                                          a.id,
+                                          'resolved',
+                                          responderId: admin?.uid,
+                                          responderName: admin?.displayName ?? 'Admin Team',
+                                        );
+                                        if (context.mounted) SnackbarHelper.show(context, 'Emergency marked as resolved');
+                                      },
+                                    ),
+                                  ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            Text('Tourist: ${a.touristName} (${a.touristPhone.isNotEmpty ? a.touristPhone : a.touristEmail})', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                            const SizedBox(height: 4),
-                            Text('Emergency Note: "${a.message}"', style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey.shade800, fontSize: 13)),
-                            const SizedBox(height: 4),
-                            Text('GPS: ${a.latitude.toStringAsFixed(5)}, ${a.longitude.toStringAsFixed(5)} • Reported: ${a.timeAgo}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                            const Divider(height: 18),
-
-                            // Actions
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                OutlinedButton.icon(
-                                  icon: const Icon(Icons.map, size: 16),
-                                  label: const Text('View GPS on Map', style: TextStyle(fontSize: 12)),
-                                  onPressed: () => _openInGoogleMaps(a.latitude, a.longitude),
-                                ),
-                                const SizedBox(width: 8),
-                                OutlinedButton.icon(
-                                  icon: const Icon(Icons.chat, size: 16),
-                                  label: const Text('Message', style: TextStyle(fontSize: 12)),
-                                  onPressed: () => _messageTourist(a),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-
-                            // Response state workflow
-                            if (a.isActive)
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange.shade800,
-                                  foregroundColor: Colors.white,
-                                  minimumSize: const Size.fromHeight(38),
-                                ),
-                                icon: const Icon(Icons.directions_run),
-                                label: const Text('Dispatch / Mark as Responding'),
-                                onPressed: () async {
-                                  await _emergencyService.updateEmergencyStatus(
-                                    a.id,
-                                    'responding',
-                                    responderId: admin?.uid,
-                                    responderName: admin?.displayName ?? 'Admin Team',
-                                  );
-                                  if (context.mounted) SnackbarHelper.show(context, 'Status updated: Responding');
-                                },
-                              ),
-                            if (a.isResponding)
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green.shade700,
-                                  foregroundColor: Colors.white,
-                                  minimumSize: const Size.fromHeight(38),
-                                ),
-                                icon: const Icon(Icons.check_circle),
-                                label: const Text('Mark Emergency as Resolved'),
-                                onPressed: () async {
-                                  await _emergencyService.updateEmergencyStatus(
-                                    a.id,
-                                    'resolved',
-                                    responderId: admin?.uid,
-                                    responderName: admin?.displayName ?? 'Admin Team',
-                                  );
-                                  if (context.mounted) SnackbarHelper.show(context, 'Emergency marked as resolved');
-                                },
-                              ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      },
                     );
                   },
                 );

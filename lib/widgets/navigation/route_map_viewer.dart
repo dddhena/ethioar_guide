@@ -1,8 +1,17 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as osm;
+import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng;
+import '../../config/api_config.dart';
 import '../../services/routing_service.dart';
 import '../../theme/ethio_theme.dart';
+
+enum OsmMapStyle {
+  custom,
+  voyager,
+  standard,
+  topographic,
+}
 
 class RouteMapViewer extends StatefulWidget {
   final List<LatLng> polylinePoints;
@@ -39,8 +48,16 @@ class RouteMapViewer extends StatefulWidget {
 }
 
 class _RouteMapViewerState extends State<RouteMapViewer> {
-  GoogleMapController? _mapController;
-  MapType _mapType = MapType.normal;
+  final MapController _mapController = MapController();
+  late OsmMapStyle _mapStyle;
+
+  @override
+  void initState() {
+    super.initState();
+    _mapStyle = (ApiConfig.osmApiKey.isNotEmpty) ? OsmMapStyle.custom : OsmMapStyle.voyager;
+  }
+
+  osm.LatLng _toOsm(LatLng p) => osm.LatLng(p.latitude, p.longitude);
 
   @override
   void didUpdateWidget(covariant RouteMapViewer oldWidget) {
@@ -48,47 +65,37 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
 
     // Follow animated marker if active
     if (widget.animatedMarkerPosition != null &&
-        widget.animatedMarkerPosition != oldWidget.animatedMarkerPosition &&
-        _mapController != null) {
-      _mapController!.animateCamera(
-        CameraUpdate.newLatLng(widget.animatedMarkerPosition!),
+        widget.animatedMarkerPosition != oldWidget.animatedMarkerPosition) {
+      _mapController.move(
+        _toOsm(widget.animatedMarkerPosition!),
+        _mapController.camera.zoom,
       );
-    } else if (widget.polylinePoints != oldWidget.polylinePoints && _mapController != null) {
-      _fitBounds();
+    } else if (widget.polylinePoints != oldWidget.polylinePoints) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _fitBounds());
     }
   }
 
-  void _onMapCreated(GoogleMapController controller) {
-    _mapController = controller;
-    _fitBounds();
-  }
-
   void _fitBounds() {
-    if (_mapController == null) return;
     final points = widget.polylinePoints.isNotEmpty
         ? widget.polylinePoints
         : [widget.startLocation, widget.endLocation];
 
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLon = points.first.longitude;
-    double maxLon = points.first.longitude;
+    if (points.isEmpty) return;
 
-    for (final p in points) {
-      if (p.latitude < minLat) minLat = p.latitude;
-      if (p.latitude > maxLat) maxLat = p.latitude;
-      if (p.longitude < minLon) minLon = p.longitude;
-      if (p.longitude > maxLon) maxLon = p.longitude;
+    final osmPoints = points.map(_toOsm).toList();
+    if (widget.waypoints != null && widget.waypoints!.isNotEmpty) {
+      osmPoints.addAll(widget.waypoints!.map(_toOsm));
     }
 
-    final bounds = LatLngBounds(
-      southwest: LatLng(minLat, minLon),
-      northeast: LatLng(maxLat, maxLon),
-    );
-
-    _mapController!.animateCamera(
-      CameraUpdate.newLatLngBounds(bounds, 65.0),
-    );
+    try {
+      final bounds = LatLngBounds.fromPoints(osmPoints);
+      _mapController.fitCamera(
+        CameraFit.bounds(
+          bounds: bounds,
+          padding: const EdgeInsets.all(55.0),
+        ),
+      );
+    } catch (_) {}
   }
 
   void _recenterRoute() {
@@ -96,8 +103,21 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
     _fitBounds();
   }
 
-  Set<Marker> _buildMarkers() {
-    final markers = <Marker>{};
+  String _getTileUrl(OsmMapStyle style) {
+    switch (style) {
+      case OsmMapStyle.custom:
+        return ApiConfig.resolvedTileUrl;
+      case OsmMapStyle.voyager:
+        return 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
+      case OsmMapStyle.topographic:
+        return 'https://tile.opentopomap.org/{z}/{x}/{y}.png';
+      case OsmMapStyle.standard:
+        return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    }
+  }
+
+  List<Marker> _buildMarkers() {
+    final markers = <Marker>[];
 
     final startTitle = widget.startLabel.isNotEmpty ? widget.startLabel : 'Starting Point';
     final destTitle = widget.destinationLabel.isNotEmpty ? widget.destinationLabel : 'Destination';
@@ -105,30 +125,70 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
     // 1. Start Marker (Blue / Azure)
     markers.add(
       Marker(
-        markerId: const MarkerId('start_point'),
-        position: widget.startLocation,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-        infoWindow: InfoWindow(
-          title: startTitle,
-          snippet: 'Journey Departure Point',
+        point: _toOsm(widget.startLocation),
+        width: 48,
+        height: 48,
+        child: Tooltip(
+          message: '$startTitle (Departure)',
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.trip_origin_rounded, color: Colors.white, size: 16),
+              ),
+            ],
+          ),
         ),
       ),
     );
 
-    // 2. Destination Marker (Red)
+    // 2. Destination Marker (Red / Rose)
     markers.add(
       Marker(
-        markerId: const MarkerId('destination_point'),
-        position: widget.endLocation,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRose),
-        infoWindow: InfoWindow(
-          title: destTitle,
-          snippet: 'Arrival Destination',
+        point: _toOsm(widget.endLocation),
+        width: 48,
+        height: 48,
+        child: Tooltip(
+          message: '$destTitle (Arrival)',
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE53935),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.location_on_rounded, color: Colors.white, size: 18),
+              ),
+            ],
+          ),
         ),
       ),
     );
 
-    // 3. Intermediate Waypoint Markers (Orange)
+    // 3. Intermediate Waypoints (Orange)
     if (widget.waypoints != null) {
       for (int i = 0; i < widget.waypoints!.length; i++) {
         final label = (widget.waypointLabels != null && i < widget.waypointLabels!.length)
@@ -137,37 +197,74 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
 
         markers.add(
           Marker(
-            markerId: MarkerId('waypoint_$i'),
-            position: widget.waypoints![i],
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-            infoWindow: InfoWindow(
-              title: label,
-              snippet: 'Stop #${i + 1}',
+            point: _toOsm(widget.waypoints![i]),
+            width: 40,
+            height: 40,
+            child: Tooltip(
+              message: label,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    '${i + 1}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         );
       }
     }
 
-    // 4. Moving Animated Marker (Green / Yellow Vehicle / Walker Marker)
+    // 4. Moving Animated Marker (Traveler / Vehicle)
     if (widget.animatedMarkerPosition != null) {
-      final headingDeg = (widget.animatedMarkerHeading * 180 / math.pi + 360) % 360;
       markers.add(
         Marker(
-          markerId: const MarkerId('animated_traveler'),
-          position: widget.animatedMarkerPosition!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            widget.travelMode == TravelMode.driving
-                ? BitmapDescriptor.hueYellow
-                : BitmapDescriptor.hueGreen,
-          ),
-          rotation: headingDeg,
-          zIndex: 10,
-          flat: true,
-          anchor: const Offset(0.5, 0.5),
-          infoWindow: InfoWindow(
-            title: widget.travelMode == TravelMode.driving ? '🚗 Driving Preview' : '🚶 Walking Preview',
-            snippet: 'Estimated speed: ${widget.travelMode == TravelMode.driving ? "35 km/h" : "4.8 km/h"}',
+          point: _toOsm(widget.animatedMarkerPosition!),
+          width: 50,
+          height: 50,
+          child: Transform.rotate(
+            angle: widget.animatedMarkerHeading,
+            child: Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: widget.travelMode == TravelMode.driving
+                    ? Colors.amber.shade700
+                    : Colors.green.shade600,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Icon(
+                widget.travelMode == TravelMode.driving
+                    ? Icons.directions_car_rounded
+                    : Icons.directions_walk_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
           ),
         ),
       );
@@ -176,26 +273,20 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
     return markers;
   }
 
-  Set<Polyline> _buildPolylines() {
-    final polylines = <Polyline>{};
-
+  List<Polyline> _buildPolylines() {
     final points = widget.polylinePoints.isNotEmpty
         ? widget.polylinePoints
         : [widget.startLocation, widget.endLocation];
 
-    // Primary route road line (safe for both Web and Mobile)
-    polylines.add(
+    return [
       Polyline(
-        polylineId: const PolylineId('active_route'),
-        points: points,
+        points: points.map(_toOsm).toList(),
+        strokeWidth: 5.5,
         color: widget.travelMode == TravelMode.driving
             ? const Color(0xFF1E6B3B)
             : const Color(0xFFC4784A),
-        width: 6,
       ),
-    );
-
-    return polylines;
+    ];
   }
 
   @override
@@ -207,21 +298,32 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
       borderRadius: BorderRadius.circular(24),
       child: Stack(
         children: [
-          // 1. Real GoogleMap Widget
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: LatLng(midLat, midLon),
-              zoom: 14.5,
+          // 1. Free OpenStreetMap via FlutterMap
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: osm.LatLng(midLat, midLon),
+              initialZoom: 14.0,
+              onMapReady: () {
+                WidgetsBinding.instance.addPostFrameCallback((_) => _fitBounds());
+              },
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all,
+              ),
             ),
-            mapType: _mapType,
-            onMapCreated: _onMapCreated,
-            markers: _buildMarkers(),
-            polylines: _buildPolylines(),
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-            compassEnabled: true,
-            mapToolbarEnabled: false,
+            children: [
+              TileLayer(
+                urlTemplate: _getTileUrl(_mapStyle),
+                userAgentPackageName: ApiConfig.osmUserAgent,
+                maxZoom: 19,
+              ),
+              PolylineLayer(
+                polylines: _buildPolylines(),
+              ),
+              MarkerLayer(
+                markers: _buildMarkers(),
+              ),
+            ],
           ),
 
           // 2. Mode Header Badge (Top Left)
@@ -268,14 +370,14 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
             ),
           ),
 
-          // 3. Map Type Selector Menu (Top Right)
+          // 3. Map Style Selector Menu (Top Right)
           Positioned(
             top: 16,
             right: 16,
-            child: PopupMenuButton<MapType>(
-              initialValue: _mapType,
+            child: PopupMenuButton<OsmMapStyle>(
+              initialValue: _mapStyle,
               tooltip: 'Change Map Style',
-              onSelected: (type) => setState(() => _mapType = type),
+              onSelected: (style) => setState(() => _mapStyle = style),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -290,10 +392,10 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(_getMapTypeIcon(_mapType), size: 16, color: EthioColors.forest),
+                    Icon(_getMapStyleIcon(_mapStyle), size: 16, color: EthioColors.forest),
                     const SizedBox(width: 6),
                     Text(
-                      _getMapTypeLabel(_mapType),
+                      _getMapStyleLabel(_mapStyle),
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: EthioColors.charcoal),
                     ),
                     const Icon(Icons.arrow_drop_down, size: 18, color: EthioColors.muted),
@@ -301,10 +403,9 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
                 ),
               ),
               itemBuilder: (ctx) => [
-                _buildMapTypeMenuItem(MapType.normal, 'Normal Road Map', Icons.map_outlined),
-                _buildMapTypeMenuItem(MapType.satellite, 'Satellite View', Icons.satellite_alt_rounded),
-                _buildMapTypeMenuItem(MapType.terrain, 'Terrain & Elevation', Icons.terrain_rounded),
-                _buildMapTypeMenuItem(MapType.hybrid, 'Hybrid (Sat + Roads)', Icons.layers_rounded),
+                _buildMapStyleMenuItem(OsmMapStyle.voyager, 'Voyager (Clean Roads)', Icons.map_outlined),
+                _buildMapStyleMenuItem(OsmMapStyle.standard, 'Standard OpenStreetMap', Icons.public_rounded),
+                _buildMapStyleMenuItem(OsmMapStyle.topographic, 'Topographic & Hills', Icons.terrain_rounded),
               ],
             ),
           ),
@@ -319,13 +420,23 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
                 _buildMapButton(
                   icon: Icons.add,
                   tooltip: 'Zoom In',
-                  onTap: () => _mapController?.animateCamera(CameraUpdate.zoomIn()),
+                  onTap: () {
+                    _mapController.move(
+                      _mapController.camera.center,
+                      _mapController.camera.zoom + 1,
+                    );
+                  },
                 ),
                 const SizedBox(height: 8),
                 _buildMapButton(
                   icon: Icons.remove,
                   tooltip: 'Zoom Out',
-                  onTap: () => _mapController?.animateCamera(CameraUpdate.zoomOut()),
+                  onTap: () {
+                    _mapController.move(
+                      _mapController.camera.center,
+                      _mapController.camera.zoom - 1,
+                    );
+                  },
                 ),
                 const SizedBox(height: 8),
                 _buildMapButton(
@@ -342,10 +453,10 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
     );
   }
 
-  PopupMenuItem<MapType> _buildMapTypeMenuItem(MapType type, String title, IconData icon) {
-    final isSelected = _mapType == type;
-    return PopupMenuItem<MapType>(
-      value: type,
+  PopupMenuItem<OsmMapStyle> _buildMapStyleMenuItem(OsmMapStyle style, String title, IconData icon) {
+    final isSelected = _mapStyle == style;
+    return PopupMenuItem<OsmMapStyle>(
+      value: style,
       child: Row(
         children: [
           Icon(icon, size: 18, color: isSelected ? EthioColors.forest : EthioColors.stone),
@@ -366,33 +477,29 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
     );
   }
 
-  IconData _getMapTypeIcon(MapType type) {
-    switch (type) {
-      case MapType.normal:
+  IconData _getMapStyleIcon(OsmMapStyle style) {
+    switch (style) {
+      case OsmMapStyle.custom:
+        return Icons.tune_rounded;
+      case OsmMapStyle.voyager:
         return Icons.map_outlined;
-      case MapType.satellite:
-        return Icons.satellite_alt_rounded;
-      case MapType.terrain:
+      case OsmMapStyle.standard:
+        return Icons.public_rounded;
+      case OsmMapStyle.topographic:
         return Icons.terrain_rounded;
-      case MapType.hybrid:
-        return Icons.layers_rounded;
-      default:
-        return Icons.map;
     }
   }
 
-  String _getMapTypeLabel(MapType type) {
-    switch (type) {
-      case MapType.normal:
-        return 'Normal';
-      case MapType.satellite:
-        return 'Satellite';
-      case MapType.terrain:
-        return 'Terrain';
-      case MapType.hybrid:
-        return 'Hybrid';
-      default:
-        return 'Normal';
+  String _getMapStyleLabel(OsmMapStyle style) {
+    switch (style) {
+      case OsmMapStyle.custom:
+        return 'Custom / API';
+      case OsmMapStyle.voyager:
+        return 'Voyager';
+      case OsmMapStyle.standard:
+        return 'Standard';
+      case OsmMapStyle.topographic:
+        return 'Topographic';
     }
   }
 
@@ -417,11 +524,11 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
               color: highlight ? EthioColors.forestLight : EthioColors.divider,
               width: 1,
             ),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
                 color: EthioColors.cardShadow,
                 blurRadius: 6,
-                offset: Offset(0, 2),
+                offset: const Offset(0, 2),
               ),
             ],
           ),
