@@ -54,7 +54,7 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
   @override
   void initState() {
     super.initState();
-    _mapStyle = (ApiConfig.osmApiKey.isNotEmpty) ? OsmMapStyle.custom : OsmMapStyle.voyager;
+    _mapStyle = (ApiConfig.osmApiKey.isNotEmpty) ? OsmMapStyle.custom : OsmMapStyle.standard;
   }
 
   osm.LatLng _toOsm(LatLng p) => osm.LatLng(p.latitude, p.longitude);
@@ -107,12 +107,15 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
     switch (style) {
       case OsmMapStyle.custom:
         return ApiConfig.resolvedTileUrl;
-      case OsmMapStyle.voyager:
-        return 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
-      case OsmMapStyle.topographic:
-        return 'https://tile.opentopomap.org/{z}/{x}/{y}.png';
       case OsmMapStyle.standard:
         return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+      case OsmMapStyle.topographic:
+        return 'https://tile.opentopomap.org/{z}/{x}/{y}.png';
+      case OsmMapStyle.voyager:
+        final key = ApiConfig.osmApiKey;
+        return key.isNotEmpty
+            ? 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?api_key=$key'
+            : 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
     }
   }
 
@@ -403,9 +406,9 @@ class _RouteMapViewerState extends State<RouteMapViewer> {
                 ),
               ),
               itemBuilder: (ctx) => [
-                _buildMapStyleMenuItem(OsmMapStyle.voyager, 'Voyager (Clean Roads)', Icons.map_outlined),
-                _buildMapStyleMenuItem(OsmMapStyle.standard, 'Standard OpenStreetMap', Icons.public_rounded),
-                _buildMapStyleMenuItem(OsmMapStyle.topographic, 'Topographic & Hills', Icons.terrain_rounded),
+                _buildMapStyleMenuItem(OsmMapStyle.standard, 'Standard OpenStreetMap (Free, Recommended)', Icons.public_rounded),
+                _buildMapStyleMenuItem(OsmMapStyle.topographic, 'Topographic & Hills (Free)', Icons.terrain_rounded),
+                _buildMapStyleMenuItem(OsmMapStyle.voyager, 'Carto Voyager (Key required)', Icons.map_outlined),
               ],
             ),
           ),

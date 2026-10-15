@@ -4,6 +4,7 @@ import '../../models/guide_profile.dart';
 import '../../models/booking.dart';
 import '../../models/tour_package.dart';
 import '../../services/auth_service.dart';
+import '../../services/session_service.dart';
 import '../../services/guide_service.dart';
 import '../../services/theme_service.dart';
 import '../../widgets/notification_bell_button.dart';
@@ -154,10 +155,7 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
             icon: const Icon(Icons.logout),
             tooltip: 'Logout',
             onPressed: () async {
-              await _auth.signOut();
-              if (mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-              }
+              await SessionService().logout(context, reason: 'Signed out successfully.');
             },
           ),
           const NotificationBellButton(),

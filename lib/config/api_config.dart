@@ -184,7 +184,7 @@ class ApiConfig {
     }
     return const String.fromEnvironment(
       'OSM_TILE_URL',
-      defaultValue: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+      defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     );
   }
 
@@ -269,7 +269,7 @@ class ApiConfig {
     _telebirrSandbox = true;
 
     // OpenStreetMap default preset
-    _osmTileUrl = 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
+    _osmTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     _osrmRoutingUrl = 'https://router.project-osrm.org';
     _osmUserAgent = 'com.example.ethioar_guide';
   }

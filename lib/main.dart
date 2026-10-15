@@ -24,6 +24,8 @@ import 'pages/recommendations_page.dart';
 // lib/firebase_options.dart with DefaultFirebaseOptions. After that the app
 // initializes Firebase for all supported platforms using the generated options.
 
+import 'pages/welcome/welcome_landing_page.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
@@ -60,6 +62,7 @@ class _MyAppState extends State<MyApp> {
           darkTheme: buildEthioDarkTheme(),
           themeMode: _themeService.isDarkMode ? ThemeMode.dark : ThemeMode.light,
           routes: {
+            '/welcome': (_) => const WelcomeLandingPage(),
             '/login': (_) => const LoginPage(),
             '/register': (_) => const RegisterPage(),
             '/dashboard': (_) => const DashboardPage(),
@@ -80,77 +83,22 @@ class _MyAppState extends State<MyApp> {
           home: FutureBuilder<FirebaseApp>(
             future: _initialization,
             builder: (context, snapshot) {
-              // Show loading while initializing
+              // While initializing, show a clean branded splash
               if (snapshot.connectionState != ConnectionState.done) {
                 return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-
-              // If initialization failed, show an error but allow the user to continue
-              if (snapshot.hasError) {
-                return Scaffold(
-                  appBar: AppBar(title: const Text('EthioAR Guide')),
+                  backgroundColor: EthioColors.cream,
                   body: Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.error, size: 48, color: Colors.red),
-                          const SizedBox(height: 12),
-                          const Text('⚠️ Firebase initialization failed', style: TextStyle(fontSize: 18)),
-                          const SizedBox(height: 8),
-                          Text(snapshot.error.toString()),
-                          const SizedBox(height: 16),
-                          Builder(
-                            builder: (btnContext) => ElevatedButton(
-                              onPressed: () => Navigator.of(btnContext).push(
-                                MaterialPageRoute(builder: (_) => const HomeDecider()),
-                              ),
-                              child: const Text('Continue (offline)'),
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
+                    child: CircularProgressIndicator(color: EthioColors.forest),
                   ),
                 );
               }
 
-              // Initialization succeeded — show the app
-              return const HomeDecider();
+              // Return beautiful welcome landing page for all users (online or offline)
+              return const WelcomeLandingPage();
             },
           ),
         );
       },
-    );
-  }
-}
-
-class HomeDecider extends StatelessWidget {
-  const HomeDecider({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // Show a simple connected message and link to login
-    return Scaffold(
-      appBar: AppBar(title: const Text('EthioAR Guide')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('✅ Firebase connected', style: TextStyle(fontSize: 18)),
-              const SizedBox(height: 16),
-              ElevatedButton(onPressed: () => Navigator.of(context).pushNamed('/login'), child: const Text('Go to Login')),
-              const SizedBox(height: 8),
-              ElevatedButton(onPressed: () => Navigator.of(context).pushNamed('/register'), child: const Text('Create Account')),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

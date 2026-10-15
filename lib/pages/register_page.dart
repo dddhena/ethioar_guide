@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../services/session_service.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/snackbar_helper.dart';
 
@@ -65,17 +66,18 @@ class _RegisterPageState extends State<RegisterPage> {
         role: _selectedRole,
       );
       if (user != null) {
+        await SessionService().recordLogin(user.uid);
         if (!mounted) return;
         SnackbarHelper.show(context, 'Registration successful! Welcome aboard.');
         Navigator.of(context).pop();
       } else {
-        SnackbarHelper.show(context, 'Firebase not available or registration failed.');
+        if (mounted) SnackbarHelper.show(context, 'Firebase not available or registration failed.');
       }
     } on FirebaseAuthException catch (e) {
       final message = _friendlyAuthError(e.code);
-      SnackbarHelper.show(context, message);
+      if (mounted) SnackbarHelper.show(context, message);
     } catch (e) {
-      SnackbarHelper.show(context, 'Unexpected error: ${e.toString()}');
+      if (mounted) SnackbarHelper.show(context, 'Unexpected error: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

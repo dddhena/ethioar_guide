@@ -18,18 +18,18 @@ class MapPickerPage extends StatefulWidget {
 class _MapPickerPageState extends State<MapPickerPage> {
   late LatLng _position;
   final MapController _mapController = MapController();
-  int _mapStyleIndex = 0; // 0: Voyager, 1: Standard, 2: Topographic
+  int _mapStyleIndex = 0; // 0: Standard, 1: Topographic, 2: Voyager
 
   static const List<String> _tileUrls = [
-    'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
     'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+    'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
   ];
 
   static const List<String> _styleNames = [
-    'Voyager (Roads)',
-    'Standard OSM',
+    'Standard OSM (Free)',
     'Topographic',
+    'Voyager (Key required)',
   ];
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/ethio_theme.dart';
 import '../models/user_profile.dart';
 import '../services/auth_service.dart';
+import '../services/session_service.dart';
 import '../services/firestore_service.dart';
 import '../services/theme_service.dart';
 import '../widgets/app_scaffold.dart';
@@ -405,13 +406,7 @@ class _DashboardPageState extends State<DashboardPage> {
           icon: const Icon(Icons.logout),
           tooltip: 'Sign Out',
           onPressed: () async {
-            await _auth.signOut();
-            if (context.mounted) {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginPage()),
-                (route) => false,
-              );
-            }
+            await SessionService().logout(context, reason: 'Signed out successfully.');
           },
         ),
       ],

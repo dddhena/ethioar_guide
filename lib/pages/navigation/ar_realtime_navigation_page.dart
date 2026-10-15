@@ -9,7 +9,7 @@ import '../../services/location_service.dart';
 import '../../services/routing_service.dart';
 import '../../theme/ethio_theme.dart';
 import '../../widgets/navigation/route_map_viewer.dart';
-import '../camera_preview.dart';
+import '../../widgets/navigation/ar_camera_background_view.dart';
 import 'ar_attraction_experience_page.dart';
 
 class ArRealtimeNavigationPage extends StatefulWidget {
@@ -123,7 +123,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
       final points = _currentRoute.polylinePoints;
       if (points.isEmpty) return;
 
-      final delta = (widget.travelMode == TravelMode.driving ? 0.008 : 0.004);
+      final delta = (widget.travelMode == TravelMode.driving ? 0.0025 : 0.0012);
       _simProgress = (_simProgress + delta).clamp(0.0, 1.0);
 
       final exactIdx = _simProgress * (points.length - 1);
@@ -161,11 +161,13 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
       _updateCurrentStepIndex();
     });
 
-    // 1. Arrival Check (< 25 meters)
+    // 1. Arrival Check (< 25 meters, after navigation has actually progressed)
     if (distToDest <= 25 && !_hasArrived) {
-      _hasArrived = true;
-      _triggerArrival();
-      return;
+      if (!_isSimulatingGps || _simProgress >= 0.90) {
+        _hasArrived = true;
+        _triggerArrival();
+        return;
+      }
     }
 
     // 2. Off-Route Detection (> 45 meters from nearest route polyline point)
@@ -313,7 +315,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
         children: [
           // 1. Live Camera Stream Background
           Positioned.fill(
-            child: const CameraPreviewPage(),
+            child: const ArCameraBackgroundView(),
           ),
 
           // 2. Immersive AR Directional 3D Perspective Ground Path & Floating Arrows

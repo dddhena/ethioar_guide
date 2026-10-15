@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/ethio_theme.dart';
 import '../../services/auth_service.dart';
+import '../../services/session_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/emergency_service.dart';
 import '../../services/payment_service.dart';
@@ -577,13 +578,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _logout() async {
-    await _auth.signOut();
-    if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-        (route) => false,
-      );
-    }
+    await SessionService().logout(context, reason: 'Signed out successfully.');
   }
 
   Widget _buildMainContent() {

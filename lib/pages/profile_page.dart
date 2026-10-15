@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_profile.dart';
 import '../services/auth_service.dart';
+import '../services/session_service.dart';
 import '../services/firestore_service.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/snackbar_helper.dart';
@@ -347,13 +348,7 @@ class _ProfilePageState extends State<ProfilePage> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade600, foregroundColor: Colors.white),
             onPressed: () async {
               Navigator.of(ctx).pop();
-              await _auth.signOut();
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                  (route) => false,
-                );
-              }
+              await SessionService().logout(context, reason: 'Signed out successfully.');
             },
             child: const Text('Sign Out'),
           ),

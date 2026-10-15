@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/user_profile.dart';
 import '../../services/auth_service.dart';
+import '../../services/session_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/journey_preference_service.dart';
 import '../../theme/ethio_theme.dart';
@@ -97,13 +98,8 @@ class _ArDiscoveryDashboardPageState extends State<ArDiscoveryDashboardPage> {
   }
 
   Future<void> _signOut() async {
-    await _auth.signOut();
     JourneyPreferenceService.instance.clear();
-    if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-      (_) => false,
-    );
+    await SessionService().logout(context, reason: 'Signed out successfully.');
   }
 
   void _onNavTap(int index) {

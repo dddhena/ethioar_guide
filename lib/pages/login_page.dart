@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../services/session_service.dart';
 import 'register_page.dart';
 import 'tourist_home_router.dart';
 import '../widgets/app_scaffold.dart';
@@ -28,19 +29,22 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text.trim(),
       );
       if (user != null) {
+        await SessionService().recordLogin(user.uid);
+        if (!mounted) return;
         await TouristHomeRouter.navigateAfterLogin(context);
       } else {
+        if (!mounted) return;
         SnackbarHelper.show(context, 'Firebase not available or login failed');
       }
     } on FirebaseAuthException catch (e) {
       final message = 'Authentication error: ${e.code} - ${e.message ?? ''}';
       // ignore: avoid_print
       print('Login FirebaseAuthException: ${e.code} - ${e.message}');
-      SnackbarHelper.show(context, message);
+      if (mounted) SnackbarHelper.show(context, message);
     } catch (e, st) {
       // ignore: avoid_print
       print('Login unexpected error: $e\n$st');
-      SnackbarHelper.show(context, 'Unexpected error: ${e.toString()}');
+      if (mounted) SnackbarHelper.show(context, 'Unexpected error: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

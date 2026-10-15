@@ -3,10 +3,10 @@ import 'provider_dashboard_page.dart';
 import 'provider_reservations_page.dart';
 import 'provider_payments_page.dart';
 import 'provider_edit_profile_page.dart';
-import 'provider_notifications_page.dart';
 import '../../models/service_provider.dart';
 import '../../widgets/notification_bell_button.dart';
 import '../../services/auth_service.dart';
+import '../../services/session_service.dart';
 import '../../services/theme_service.dart';
 import '../chat/conversations_list_page.dart';
 
@@ -56,10 +56,7 @@ class _ProviderNavigationWrapperState extends State<ProviderNavigationWrapper> {
             icon: const Icon(Icons.logout),
             tooltip: 'Logout',
             onPressed: () async {
-              await _auth.signOut();
-              if (mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-              }
+              await SessionService().logout(context, reason: 'Signed out successfully.');
             },
           ),
           const NotificationBellButton(),

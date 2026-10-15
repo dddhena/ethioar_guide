@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/landmark.dart';
 import '../../theme/ethio_theme.dart';
-import '../camera_preview.dart';
+import '../../widgets/navigation/ar_camera_background_view.dart';
 
 class ArAttractionExperiencePage extends StatefulWidget {
   final String attractionName;
@@ -461,11 +461,8 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
     return Stack(
       children: [
         // Camera Viewport Simulation / Feed
-        Container(
-          color: Colors.black87,
-          child: const Center(
-            child: CameraPreviewPage(),
-          ),
+        const Positioned.fill(
+          child: ArCameraBackgroundView(),
         ),
 
         // Floating AR Spatial Pins Overlaid on Camera
