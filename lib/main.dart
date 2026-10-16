@@ -20,10 +20,7 @@ import 'pages/providers/admin_providers_page.dart';
 import 'pages/admin/admin_dashboard.dart';
 import 'pages/guides/guide_dashboard_page.dart';
 import 'pages/recommendations_page.dart';
-// This app expects you to run `flutterfire configure` locally to generate
-// lib/firebase_options.dart with DefaultFirebaseOptions. After that the app
-// initializes Firebase for all supported platforms using the generated options.
-
+import 'pages/ar/heritage_3d_explorer_page.dart';
 import 'pages/welcome/welcome_landing_page.dart';
 
 void main() {
@@ -79,6 +76,7 @@ class _MyAppState extends State<MyApp> {
             '/admin-dashboard': (_) => const AdminDashboard(),
             '/guide-dashboard': (_) => const GuideDashboardPage(),
             '/recommendations': (_) => const RecommendationsPage(),
+            '/heritage-3d': (_) => const Heritage3DExplorerPage(),
           },
           home: FutureBuilder<FirebaseApp>(
             future: _initialization,

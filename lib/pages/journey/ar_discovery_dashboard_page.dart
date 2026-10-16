@@ -11,22 +11,17 @@ import '../../widgets/journey/dashboard_widgets.dart';
 import '../../widgets/journey/recommended_places_section.dart';
 import '../../widgets/notification_bell_button.dart';
 import '../ai_guide_page.dart';
-import '../ar_guide.dart';
 import '../camera_preview.dart';
 import '../dashboard_page.dart';
 import '../emergency/emergency_sos_dialog.dart';
 import '../explore_page.dart';
-import '../favorites_page.dart';
 import '../landmarks_page.dart';
-import '../login_page.dart';
 import '../nearby_landmarks_page.dart';
 import '../profile_page.dart';
-import '../providers/my_reservations_page.dart';
-import '../providers/service_providers_list_page.dart';
-import '../trips_page.dart';
-import '../navigation/route_preview_page.dart';
 import 'choose_journey_page.dart';
 import 'guided_journey_dashboard_page.dart';
+import '../ar/heritage_3d_explorer_page.dart';
+import '../ar/ar_marker_scanner_sheet.dart';
 import '../../services/theme_service.dart';
 
 class ArDiscoveryDashboardPage extends StatefulWidget {
@@ -259,7 +254,17 @@ class _ArDiscoveryDashboardPageState extends State<ArDiscoveryDashboardPage> {
                     title: 'Scan Marker',
                     subtitle: 'Scan & reveal',
                     accent: EthioColors.terracotta,
-                    onTap: () => _push(const CameraPreviewPage()),
+                    onTap: () => ArMarkerScannerSheet.show(context),
+                  ),
+                ),
+                SizedBox(
+                  width: cardWidth,
+                  child: DashboardFeatureCard(
+                    icon: Icons.view_in_ar_rounded,
+                    title: '3D Heritage',
+                    subtitle: 'AR Time-Machine',
+                    accent: EthioColors.gold,
+                    onTap: () => _push(const Heritage3DExplorerPage()),
                   ),
                 ),
                 SizedBox(
@@ -270,19 +275,6 @@ class _ArDiscoveryDashboardPageState extends State<ArDiscoveryDashboardPage> {
                     subtitle: 'Explore history',
                     accent: EthioColors.forest,
                     onTap: () => _push(const LandmarksPage()),
-                  ),
-                ),
-                SizedBox(
-                  width: cardWidth,
-                  child: DashboardFeatureCard(
-                    icon: Icons.navigation_outlined,
-                    title: 'AR Navigation',
-                    subtitle: 'Find your way',
-                    accent: EthioColors.stone,
-                    onTap: () => _push(const RoutePreviewPage(
-                      destinationTitle: 'Fasil Ghebbi',
-                      contextMode: JourneyContext.arDiscovery,
-                    )),
                   ),
                 ),
               ],

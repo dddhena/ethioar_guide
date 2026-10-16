@@ -354,7 +354,7 @@ class _WelcomeLandingPageState extends State<WelcomeLandingPage>
                                     Text('🇪🇹', style: TextStyle(fontSize: 14)),
                                     SizedBox(width: 6),
                                     Text(
-                                      'ETHIOPIA • LAND OF ORIGINS',
+                                      'ETHIOPIA',
                                       style: TextStyle(
                                         color: EthioColors.terracotta,
                                         fontSize: 11,

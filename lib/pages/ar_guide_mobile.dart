@@ -9,6 +9,8 @@ import 'package:ar_flutter_plugin/managers/ar_location_manager.dart';
 import 'package:vector_math/vector_math_64.dart' as vm;
 import '../services/firestore_service.dart';
 import '../models/landmark.dart';
+import '../models/heritage_3d_landmark.dart';
+import 'ar/heritage_3d_explorer_page.dart';
 
 class ARGuidePage extends StatefulWidget {
   const ARGuidePage({super.key});
@@ -88,8 +90,26 @@ class _ARGuidePageState extends State<ARGuidePage> {
         final tappedName = nodeNames.first;
         final lm = nodeLandmark[tappedName];
         if (lm != null && mounted) {
+          final match = Heritage3DLandmark.sampleHeritageModels.firstWhere(
+            (m) =>
+                m.name.toLowerCase().contains(lm.name.toLowerCase()) ||
+                lm.name.toLowerCase().contains(m.name.toLowerCase()),
+            orElse: () => Heritage3DLandmark.sampleHeritageModels.first,
+          );
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${lm.name}: ${lm.description}')),
+            SnackBar(
+              content: Text('${lm.name}: ${lm.description}'),
+              action: SnackBarAction(
+                label: 'View 3D',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => Heritage3DExplorerPage(initialLandmark: match),
+                    ),
+                  );
+                },
+              ),
+            ),
           );
         }
       };
@@ -106,7 +126,20 @@ class _ARGuidePageState extends State<ARGuidePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('AR Tourist Guide (Mobile)')),
+      appBar: AppBar(
+        title: const Text('AR Tourist Guide'),
+        actions: [
+          IconButton(
+            tooltip: 'Open 3D Heritage Explorer',
+            icon: const Icon(Icons.view_in_ar, color: Colors.amberAccent),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const Heritage3DExplorerPage()),
+              );
+            },
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _hasArError
@@ -157,7 +190,23 @@ class _ARGuidePageState extends State<ARGuidePage> {
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC76D52),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const Heritage3DExplorerPage()),
+              );
+            },
+            icon: const Icon(Icons.view_in_ar),
+            label: const Text('Open 3D Heritage & Time-Machine'),
+          ),
+          const SizedBox(height: 16),
           Expanded(
             child: ListView.builder(
               itemCount: _landmarks.length,

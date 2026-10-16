@@ -10,6 +10,8 @@ import '../widgets/explore_categories.dart';
 import '../widgets/favorite_button.dart';
 import '../widgets/place_image.dart';
 import 'navigation/route_preview_page.dart';
+import '../models/heritage_3d_landmark.dart';
+import 'ar/heritage_3d_explorer_page.dart';
 
 class LandmarkDetailPage extends StatelessWidget {
   final Landmark landmark;
@@ -124,6 +126,31 @@ class LandmarkDetailPage extends StatelessWidget {
               },
               icon: const Icon(Icons.route_rounded),
               label: const Text('Preview Route & AR Journey', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: EthioColors.terracotta,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: () {
+                final match = Heritage3DLandmark.sampleHeritageModels.firstWhere(
+                  (m) =>
+                      m.name.toLowerCase().contains(landmark.name.toLowerCase()) ||
+                      landmark.name.toLowerCase().contains(m.name.toLowerCase()) ||
+                      (landmark.city.isNotEmpty && m.location.toLowerCase().contains(landmark.city.toLowerCase())),
+                  orElse: () => Heritage3DLandmark.sampleHeritageModels.first,
+                );
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => Heritage3DExplorerPage(initialLandmark: match),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.view_in_ar_rounded),
+              label: const Text('Explore in 3D & AR Time-Machine', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 12),
             Row(

@@ -21,6 +21,7 @@ abstract final class EthioColors {
   static const providerBlue = Color(0xFF2E5C8D);
   static const guideGreen = Color(0xFF1C7A54);
   static const adminGold = Color(0xFFC59B27);
+  static const gold = Color(0xFFC59B27);
 }
 
 ThemeData buildEthioTheme() {
