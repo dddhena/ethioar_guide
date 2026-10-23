@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -42,6 +41,16 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
   double _currentSpeedKmh = 0.0;
   double _remainingDistanceMeters = 0.0;
   int _currentStepIndex = 0;
+
+  // Real-time Dynamic Guidance States
+  bool _isOffRoad = false;
+  double _distanceToRoad = 0.0;
+  bool _hasTriggeredTurnNow = false;
+  int _lastTurnedJunctionIndex = -1;
+  ManeuverType _dynamicManeuver = ManeuverType.continueStraight;
+  String _dynamicInstruction = '';
+  bool _isWrongDirection = false;
+  bool _isMoveBackward = false;
 
   // Streams & Timers
   StreamSubscription<Position>? _positionStream;
@@ -159,6 +168,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
       _currentSpeedKmh = speedMs * 3.6;
       _remainingDistanceMeters = distToDest;
       _updateCurrentStepIndex();
+      _evaluateGuidanceState(newPos);
     });
 
     // 1. Arrival Check (< 25 meters, after navigation has actually progressed)
@@ -170,7 +180,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
       }
     }
 
-    // 2. Off-Route Detection (> 45 meters from nearest route polyline point)
+    // 2. Off-Route Detection (> 55 meters from nearest route polyline point)
     _checkRouteDeviation(newPos);
   }
 
@@ -180,11 +190,106 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
 
     for (int i = _currentStepIndex; i < steps.length; i++) {
       final distToStep = _distanceBetween(_currentGpsPosition, steps[i].location);
-      if (distToStep < 20 && i < steps.length - 1) {
+      if (distToStep < 18 && i < steps.length - 1) {
         _currentStepIndex = i + 1;
         break;
       }
     }
+  }
+
+  void _evaluateGuidanceState(LatLng current) {
+    final steps = _currentRoute.steps;
+    if (steps.isEmpty) return;
+
+    // Check distance to closest point on route polyline
+    final points = _currentRoute.polylinePoints;
+    double minRoadDist = double.infinity;
+    for (final p in points) {
+      final d = _distanceBetween(current, p);
+      if (d < minRoadDist) minRoadDist = d;
+    }
+
+    // Off-Road guidance mode (between 15m and 55m away from road)
+    if (minRoadDist > 15.0 && minRoadDist <= 55.0) {
+      _isOffRoad = true;
+      _distanceToRoad = minRoadDist;
+      _dynamicManeuver = ManeuverType.offRoadConnect;
+      _dynamicInstruction = 'Head towards road (${minRoadDist.round()}m)';
+      return;
+    }
+    _isOffRoad = false;
+
+    final stepIdx = _currentStepIndex.clamp(0, steps.length - 1);
+    final currentStep = steps[stepIdx];
+    final distToStep = _distanceBetween(current, currentStep.location);
+    final targetBearing = _calculateBearing(current, currentStep.location);
+
+    // Calculate heading difference
+    double headingDelta = (_currentHeadingDegrees - targetBearing).abs() % 360;
+    if (headingDelta > 180) headingDelta = 360 - headingDelta;
+
+    // 1. Move Backward / Turn Around (Angle discrepancy >= 135°)
+    if (headingDelta >= 135.0) {
+      _isMoveBackward = true;
+      _isWrongDirection = false;
+      _dynamicManeuver = ManeuverType.uTurn;
+      _dynamicInstruction = 'Move backward / Make a U-turn';
+      return;
+    }
+
+    // 2. Wrong Direction Warning (Angle discrepancy >= 85°)
+    if (headingDelta >= 85.0) {
+      _isWrongDirection = true;
+      _isMoveBackward = false;
+      _dynamicManeuver = ManeuverType.wrongDirection;
+      _dynamicInstruction = 'Wrong direction! Turn around';
+      return;
+    }
+
+    _isMoveBackward = false;
+    _isWrongDirection = false;
+
+    final isTurn = currentStep.maneuverType == ManeuverType.turnRight ||
+        currentStep.maneuverType == ManeuverType.turnLeft ||
+        currentStep.maneuverType == ManeuverType.turnSharpRight ||
+        currentStep.maneuverType == ManeuverType.turnSharpLeft;
+
+    // 3. Exact Turn Prompt at the Junction (<= 12 meters)
+    if (distToStep <= 12.0 && isTurn) {
+      _hasTriggeredTurnNow = true;
+      _lastTurnedJunctionIndex = stepIdx;
+      final turnSide = (currentStep.maneuverType == ManeuverType.turnLeft || currentStep.maneuverType == ManeuverType.turnSharpLeft)
+          ? 'left'
+          : 'right';
+      _dynamicManeuver = currentStep.maneuverType;
+      _dynamicInstruction = 'Turn $turnSide now';
+      return;
+    }
+
+    // 4. Transition to "Head out" when the turn has been made
+    if (_hasTriggeredTurnNow && _lastTurnedJunctionIndex == stepIdx - 1 && headingDelta <= 30.0) {
+      _dynamicManeuver = ManeuverType.headOut;
+      _dynamicInstruction = 'Head out straight along path';
+      return;
+    }
+
+    _dynamicManeuver = currentStep.maneuverType;
+    _dynamicInstruction = currentStep.instruction;
+  }
+
+  double _calculateBearing(LatLng start, LatLng dest) {
+    final startLat = start.latitude * (math.pi / 180.0);
+    final startLng = start.longitude * (math.pi / 180.0);
+    final endLat = dest.latitude * (math.pi / 180.0);
+    final endLng = dest.longitude * (math.pi / 180.0);
+
+    final dLng = endLng - startLng;
+    final y = math.sin(dLng) * math.cos(endLat);
+    final x = math.cos(startLat) * math.sin(endLat) -
+        math.sin(startLat) * math.cos(endLat) * math.cos(dLng);
+
+    double bearing = math.atan2(y, x) * (180.0 / math.pi);
+    return (bearing + 360.0) % 360.0;
   }
 
   void _checkRouteDeviation(LatLng current) {
@@ -448,13 +553,23 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: EthioColors.forestLight.withValues(alpha: 0.3),
+                  color: (_isWrongDirection || _isMoveBackward)
+                      ? Colors.redAccent.withValues(alpha: 0.3)
+                      : (_isOffRoad
+                          ? Colors.cyanAccent.withValues(alpha: 0.3)
+                          : EthioColors.forestLight.withValues(alpha: 0.3)),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.greenAccent),
+                  border: Border.all(
+                    color: (_isWrongDirection || _isMoveBackward)
+                        ? Colors.redAccent
+                        : (_isOffRoad ? Colors.cyanAccent : Colors.greenAccent),
+                  ),
                 ),
                 child: Icon(
-                  _getManeuverIconData(currentStep?.maneuverType),
-                  color: Colors.greenAccent,
+                  _getManeuverIconData(_dynamicManeuver),
+                  color: (_isWrongDirection || _isMoveBackward)
+                      ? Colors.redAccent
+                      : (_isOffRoad ? Colors.cyanAccent : Colors.greenAccent),
                   size: 28,
                 ),
               ),
@@ -464,16 +579,20 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      currentStep?.instruction ?? 'Proceed to ${widget.destinationName}',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      _dynamicInstruction.isNotEmpty
+                          ? _dynamicInstruction
+                          : (currentStep?.instruction ?? 'Proceed to ${widget.destinationName}'),
+                      style: TextStyle(
+                        color: (_isWrongDirection || _isMoveBackward) ? Colors.redAccent : Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '📍 $distRemainingStr remaining • ${_currentSpeedKmh.toStringAsFixed(1)} km/h',
+                      _isOffRoad
+                          ? '📍 Heading towards walkway access (${_distanceToRoad.round()}m) • ${_currentSpeedKmh.toStringAsFixed(1)} km/h'
+                          : '📍 $distRemainingStr remaining • ${_currentSpeedKmh.toStringAsFixed(1)} km/h',
                       style: const TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ],
@@ -498,6 +617,14 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
         return Icons.turn_left_rounded;
       case ManeuverType.roundabout:
         return Icons.rotate_right_rounded;
+      case ManeuverType.uTurn:
+        return Icons.u_turn_left_rounded;
+      case ManeuverType.headOut:
+        return Icons.arrow_upward_rounded;
+      case ManeuverType.wrongDirection:
+        return Icons.warning_amber_rounded;
+      case ManeuverType.offRoadConnect:
+        return Icons.alt_route_rounded;
       case ManeuverType.arrive:
         return Icons.flag_rounded;
       default:
@@ -515,8 +642,8 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
             heading: _currentHeadingDegrees,
             pulse: _arPulseController.value,
             travelMode: widget.travelMode,
-            nextInstruction: step?.instruction ?? 'Walk Straight',
-            maneuverType: step?.maneuverType ?? ManeuverType.continueStraight,
+            nextInstruction: _dynamicInstruction.isNotEmpty ? _dynamicInstruction : (step?.instruction ?? 'Walk Straight'),
+            maneuverType: _dynamicManeuver,
           ),
           size: Size.infinite,
         );
@@ -694,31 +821,46 @@ class _ArPerspectiveOverlayPainter extends CustomPainter {
       canvas.drawPath(chevronPath, chevronPaint);
     }
 
-    // 3. Draw Center AR Floating Turn Navigation Marker (e.g. Turn Right ➜)
+    // 3. Draw Center AR Floating Turn Navigation Marker (e.g. Turn Right ➜, Head Out ⇈, U-Turn ↷)
     final markerCenter = Offset(centerX, size.height * 0.42);
 
+    Color markerAccentColor = Colors.greenAccent;
+    String arrowChar = '↑';
+
+    if (maneuverType == ManeuverType.turnRight || maneuverType == ManeuverType.turnSharpRight || maneuverType == ManeuverType.turnSlightRight) {
+      arrowChar = '➜';
+      markerAccentColor = Colors.amberAccent;
+    } else if (maneuverType == ManeuverType.turnLeft || maneuverType == ManeuverType.turnSharpLeft || maneuverType == ManeuverType.turnSlightLeft) {
+      arrowChar = '⬅';
+      markerAccentColor = Colors.amberAccent;
+    } else if (maneuverType == ManeuverType.uTurn) {
+      arrowChar = '↷';
+      markerAccentColor = Colors.redAccent;
+    } else if (maneuverType == ManeuverType.wrongDirection) {
+      arrowChar = '⚠️';
+      markerAccentColor = Colors.redAccent;
+    } else if (maneuverType == ManeuverType.headOut) {
+      arrowChar = '⇈';
+      markerAccentColor = Colors.greenAccent;
+    } else if (maneuverType == ManeuverType.offRoadConnect) {
+      arrowChar = '↗';
+      markerAccentColor = Colors.cyanAccent;
+    }
+
     final ringPaint = Paint()
-      ..color = Colors.amberAccent.withValues(alpha: 0.8)
+      ..color = markerAccentColor.withValues(alpha: 0.8)
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke;
     canvas.drawCircle(markerCenter, 32 + pulse * 4, ringPaint);
 
-    final bgPaint = Paint()..color = Colors.black.withValues(alpha: 0.75);
+    final bgPaint = Paint()..color = Colors.black.withValues(alpha: 0.80);
     canvas.drawCircle(markerCenter, 28, bgPaint);
-
-    // Directional Text / Arrow in center
-    String arrowChar = '↑';
-    if (maneuverType == ManeuverType.turnRight || maneuverType == ManeuverType.turnSharpRight) {
-      arrowChar = '➜';
-    } else if (maneuverType == ManeuverType.turnLeft || maneuverType == ManeuverType.turnSharpLeft) {
-      arrowChar = '⬅';
-    }
 
     final textPainter = TextPainter(
       text: TextSpan(
         text: arrowChar,
-        style: const TextStyle(
-          color: Colors.greenAccent,
+        style: TextStyle(
+          color: markerAccentColor,
           fontSize: 26,
           fontWeight: FontWeight.w900,
         ),

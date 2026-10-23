@@ -23,6 +23,10 @@ enum ManeuverType {
   arrive,
   fork,
   merge,
+  uTurn,
+  headOut,
+  wrongDirection,
+  offRoadConnect,
 }
 
 class RouteStep {
@@ -263,6 +267,14 @@ class RoutingService {
         return 'Keep ${modifier.contains('right') ? 'right' : 'left'} at the fork$street';
       case ManeuverType.merge:
         return 'Merge$street';
+      case ManeuverType.uTurn:
+        return 'Make a U-turn$street';
+      case ManeuverType.headOut:
+        return 'Head out straight$street';
+      case ManeuverType.wrongDirection:
+        return 'Wrong direction! Turn around';
+      case ManeuverType.offRoadConnect:
+        return 'Head towards road';
     }
   }
 
