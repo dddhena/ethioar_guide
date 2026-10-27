@@ -18,6 +18,33 @@ class GuideService {
   // GUIDES
   // ==========================================
 
+  Guide convertProfileToGuide(GuideProfile profile) {
+    final days = (profile.availability['days'] as List<dynamic>? ?? [])
+        .map((d) => d.toString())
+        .toList();
+    return Guide(
+      id: profile.userId,
+      userId: profile.userId,
+      name: profile.displayName.isNotEmpty ? profile.displayName : profile.fullName,
+      email: profile.email,
+      phone: profile.phoneNumber ?? '',
+      profileImageUrl: profile.profileImageUrl ?? '',
+      bio: profile.bio,
+      languages: profile.languages.isNotEmpty ? profile.languages : const ['English'],
+      qualifications: profile.specialties,
+      experienceYears: profile.yearsOfExperience,
+      price: (profile.pricing['amount'] as num?)?.toDouble() ?? 0.0,
+      rating: 5.0,
+      reviewCount: 0,
+      availability: {
+        for (final day in Guide.weekdays)
+          day: days.contains(day),
+      },
+      status: 'active',
+      createdAt: profile.createdAt,
+    );
+  }
+
   Future<Guide?> getGuideByUserId(String uid) async {
     if (uid.isEmpty) return null;
     try {
@@ -29,6 +56,18 @@ class GuideService {
       if (snapshot.docs.isNotEmpty) {
         final doc = snapshot.docs.first;
         return Guide.fromMap(doc.id, doc.data());
+      }
+
+      final directDoc = await _db.collection('guides').doc(uid).get();
+      if (directDoc.exists && directDoc.data() != null) {
+        return Guide.fromMap(directDoc.id, directDoc.data()!);
+      }
+
+      final profile = await getGuideProfile(uid);
+      if (profile != null) {
+        final syncedGuide = convertProfileToGuide(profile);
+        await _db.collection('guides').doc(uid).set(syncedGuide.toMap(), SetOptions(merge: true));
+        return syncedGuide;
       }
     } catch (_) {}
     return null;
@@ -382,10 +421,25 @@ class GuideService {
 
   Future<void> createGuideProfileDocument(GuideProfile profile) async {
     await _db.collection('guideProfiles').doc(profile.userId).set(profile.toMap());
+    final guide = convertProfileToGuide(profile);
+    await _db.collection('guides').doc(profile.userId).set(guide.toMap(), SetOptions(merge: true));
+    await _db.collection('users').doc(profile.userId).set({
+      'role': 'tour_guide',
+      'guideId': profile.userId,
+      'displayName': guide.name,
+      'profileCompleted': true,
+    }, SetOptions(merge: true));
   }
 
   Future<void> updateGuideProfileDocument(GuideProfile profile) async {
-    await _db.collection('guideProfiles').doc(profile.userId).update(profile.toMap());
+    await _db.collection('guideProfiles').doc(profile.userId).set(profile.toMap(), SetOptions(merge: true));
+    final guide = convertProfileToGuide(profile);
+    await _db.collection('guides').doc(profile.userId).set(guide.toMap(), SetOptions(merge: true));
+    await _db.collection('users').doc(profile.userId).set({
+      'role': 'tour_guide',
+      'guideId': profile.userId,
+      'displayName': guide.name,
+    }, SetOptions(merge: true));
   }
 
   Future<List<GuideProfile>> fetchCompletedGuideProfiles() async {

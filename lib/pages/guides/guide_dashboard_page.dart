@@ -78,9 +78,13 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
     }
 
     // Load both old Guide model and new GuideProfile
-    final g = await _guideService.getGuideByUserId(user.uid);
+    Guide? g = await _guideService.getGuideByUserId(user.uid);
     final profile = await _guideService.getGuideProfile(user.uid);
     
+    if (g == null && profile != null) {
+      g = _guideService.convertProfileToGuide(profile);
+    }
+
     if (mounted) {
       setState(() {
         _guide = g;
@@ -109,6 +113,10 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
       );
     }
 
+    if (_guide == null && _guideProfile != null) {
+      _guide = _guideService.convertProfileToGuide(_guideProfile!);
+    }
+
     if (_guide == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Guide Dashboard')),
@@ -129,6 +137,32 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
                   'Please register as a tour guide to access this dashboard.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal.shade800,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.badge_outlined),
+                  label: const Text('Complete Guide Registration'),
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const GuideProfileCreationPage()),
+                    );
+                    _loadGuideProfile();
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Check Again'),
+                  onPressed: () {
+                    setState(() => _loading = true);
+                    _checkProfileCompletion();
+                  },
                 ),
               ],
             ),
