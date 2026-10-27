@@ -5,6 +5,7 @@ import '../widgets/app_scaffold.dart';
 import '../services/firestore_service.dart';
 import '../services/location_service.dart';
 import 'nearby_landmarks_page.dart';
+import 'ar/cultural_ar_camera_page.dart';
 
 class CameraPreviewPage extends StatefulWidget {
   const CameraPreviewPage({super.key});
@@ -151,7 +152,14 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
               spacing: 8,
               runSpacing: 8,
               alignment: WrapAlignment.center,
-              children: [
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2D5A3D), foregroundColor: Colors.white),
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('✨ Cultural Lens & AR Pets'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CulturalArCameraPage()),
+                  ),
+                ),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade700, foregroundColor: Colors.white),
                   icon: const Icon(Icons.camera_alt),

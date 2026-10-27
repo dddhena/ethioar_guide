@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/landmark.dart';
 import '../services/firestore_service.dart';
 import '../widgets/app_scaffold.dart';
@@ -22,11 +23,29 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
   final _cityController = TextEditingController();
   final _categoryController = TextEditingController(text: 'heritage');
   final _imageUrlController = TextEditingController();
+  final _site3dModelUrlController = TextEditingController();
   final _entranceFeeController = TextEditingController(text: '0');
   final _latitudeController = TextEditingController();
   final _longitudeController = TextEditingController();
   bool _saving = false;
   bool _locationPicked = false;
+  List<CulturalAttire> _selectedAttires = [];
+  List<NativeAnimal> _selectedAnimals = [];
+
+  static const List<Map<String, String>> _sample3DModels = [
+    {
+      'title': 'Bete Giyorgis 3D (Lalibela)',
+      'url': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+    },
+    {
+      'title': 'Fasil Castle Keep 3D (Gondar)',
+      'url': 'https://modelviewer.dev/shared-assets/models/shishkebab.glb',
+    },
+    {
+      'title': 'Axum Obelisk Monolith 3D',
+      'url': 'https://modelviewer.dev/shared-assets/models/reflective-sphere.glb',
+    },
+  ];
 
   static const List<Map<String, String>> _sampleImages = [
     {
@@ -61,10 +80,23 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
       _cityController.text = lm.city;
       _categoryController.text = lm.category;
       _imageUrlController.text = lm.imageUrl;
+      _site3dModelUrlController.text = lm.site3dModelUrl;
       _entranceFeeController.text = lm.entranceFee > 0 ? lm.entranceFee.toStringAsFixed(0) : '0';
       _latitudeController.text = lm.latitude.toString();
       _longitudeController.text = lm.longitude.toString();
       _locationPicked = true;
+      _selectedAttires = List.from(lm.culturalAttires);
+      _selectedAnimals = List.from(lm.nativeAnimals);
+    } else {
+      // Default initial templates for convenient admin workflow
+      _selectedAttires = [
+        CulturalAttire.defaultPresets[0],
+        CulturalAttire.defaultPresets[1],
+      ];
+      _selectedAnimals = [
+        NativeAnimal.defaultPresets[0],
+        NativeAnimal.defaultPresets[1],
+      ];
     }
   }
 
@@ -87,6 +119,7 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
       final city = _cityController.text;
       final category = _categoryController.text;
       final imageUrl = _imageUrlController.text.trim();
+      final site3dModelUrl = _site3dModelUrlController.text.trim();
       final entranceFee = double.tryParse(_entranceFeeController.text.trim()) ?? 0.0;
 
       if (widget.id != null) {
@@ -100,6 +133,9 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
           category: category,
           imageUrl: imageUrl,
           entranceFee: entranceFee,
+          site3dModelUrl: site3dModelUrl,
+          culturalAttires: _selectedAttires,
+          nativeAnimals: _selectedAnimals,
         );
       } else {
         await FirestoreService().addLandmark(
@@ -111,6 +147,9 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
           category: category,
           imageUrl: imageUrl,
           entranceFee: entranceFee,
+          site3dModelUrl: site3dModelUrl,
+          culturalAttires: _selectedAttires,
+          nativeAnimals: _selectedAnimals,
         );
       }
 
@@ -136,10 +175,454 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
     _cityController.dispose();
     _categoryController.dispose();
     _imageUrlController.dispose();
+    _site3dModelUrlController.dispose();
     _entranceFeeController.dispose();
     _latitudeController.dispose();
     _longitudeController.dispose();
     super.dispose();
+  }
+
+  void _showAddAttireDialog() {
+    final nameCtrl = TextEditingController();
+    final regionCtrl = TextEditingController(text: 'Ethiopia');
+    final photoUrlCtrl = TextEditingController();
+    String wearType = 'cape_kaba';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return DefaultTabController(
+              length: 2,
+              child: Container(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 20,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                ),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.checkroom_rounded, color: Colors.deepOrange),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Add Cultural Clothes (Real-Life Photo)',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const TabBar(
+                      labelColor: Colors.deepOrange,
+                      unselectedLabelColor: Colors.grey,
+                      indicatorColor: Colors.deepOrange,
+                      tabs: [
+                        Tab(icon: Icon(Icons.photo_camera, size: 18), text: 'Real Photo Upload'),
+                        Tab(icon: Icon(Icons.history_edu, size: 18), text: 'Authentic Presets'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          // Tab 1: Custom Real-Life Photo Upload
+                          SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                TextFormField(
+                                  controller: nameCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Attire Name (e.g. Royal Gold Kaba, Habesha Kemis)',
+                                    prefixIcon: Icon(Icons.title),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                TextFormField(
+                                  controller: regionCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Region / Cultural Origin (e.g. Gondar, Oromia, Tigray)',
+                                    prefixIcon: Icon(Icons.place),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                TextFormField(
+                                  controller: photoUrlCtrl,
+                                  decoration: InputDecoration(
+                                    labelText: 'Real Photo URL (http:// or https://)',
+                                    hintText: 'https://.../real_clothes_cutout.png',
+                                    prefixIcon: const Icon(Icons.image),
+                                    suffixIcon: IconButton(
+                                      icon: const Icon(Icons.photo_library),
+                                      tooltip: 'Pick from Gallery',
+                                      onPressed: () async {
+                                        final picker = ImagePicker();
+                                        final picked = await picker.pickImage(source: ImageSource.gallery);
+                                        if (picked != null) {
+                                          photoUrlCtrl.text = picked.path;
+                                          setModalState(() {});
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  onChanged: (_) => setModalState(() {}),
+                                ),
+                                const SizedBox(height: 8),
+                                if (photoUrlCtrl.text.isNotEmpty)
+                                  Container(
+                                    height: 120,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: Colors.deepOrange.shade200),
+                                      color: Colors.grey.shade100,
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: photoUrlCtrl.text.startsWith('http')
+                                        ? Image.network(photoUrlCtrl.text, fit: BoxFit.contain)
+                                        : const Center(child: Icon(Icons.photo, size: 48, color: Colors.deepOrange)),
+                                  ),
+                                const SizedBox(height: 10),
+                                DropdownButtonFormField<String>(
+                                  value: wearType,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Wear Placement Type',
+                                    prefixIcon: Icon(Icons.accessibility_new),
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(value: 'cape_kaba', child: Text('Imperial Cape / Kaba')),
+                                    DropdownMenuItem(value: 'full_body', child: Text('Full Body Dress / Kemis')),
+                                    DropdownMenuItem(value: 'shawl_netela', child: Text('Shoulder Shawl / Netela')),
+                                  ],
+                                  onChanged: (val) {
+                                    if (val != null) setModalState(() => wearType = val);
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.deepOrange,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  onPressed: () {
+                                    final name = nameCtrl.text.trim();
+                                    final photo = photoUrlCtrl.text.trim();
+                                    if (name.isEmpty) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Please enter an attire name.')),
+                                      );
+                                      return;
+                                    }
+                                    final customAttire = CulturalAttire(
+                                      id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
+                                      name: name,
+                                      description: 'Authentic cultural attire added by admin from real-life photo.',
+                                      region: regionCtrl.text.trim().isNotEmpty ? regionCtrl.text.trim() : 'Ethiopia',
+                                      previewUrl: photo.isNotEmpty ? photo : CulturalAttire.defaultPresets.first.previewUrl,
+                                      overlayUrl: photo,
+                                      wearType: wearType,
+                                      gender: 'unisex',
+                                    );
+                                    setState(() {
+                                      _selectedAttires.add(customAttire);
+                                    });
+                                    Navigator.pop(ctx);
+                                  },
+                                  icon: const Icon(Icons.add_photo_alternate),
+                                  label: const Text('Add Real-Life Photo Attire'),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Tab 2: Authentic Presets
+                          ListView.separated(
+                            itemCount: CulturalAttire.defaultPresets.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (_, index) {
+                              final preset = CulturalAttire.defaultPresets[index];
+                              final isAlreadyAdded = _selectedAttires.any((a) => a.id == preset.id);
+
+                              return ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: CircleAvatar(
+                                  backgroundImage: NetworkImage(preset.previewUrl),
+                                ),
+                                title: Text(preset.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                subtitle: Text('${preset.region} • Real photo', style: const TextStyle(fontSize: 11)),
+                                trailing: isAlreadyAdded
+                                    ? const Chip(label: Text('Added', style: TextStyle(fontSize: 10)))
+                                    : ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.deepOrange,
+                                          foregroundColor: Colors.white,
+                                        ),
+                                        onPressed: () {
+                                          setState(() => _selectedAttires.add(preset));
+                                          Navigator.pop(ctx);
+                                        },
+                                        child: const Text('Add'),
+                                      ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAddAnimalDialog() {
+    final nameCtrl = TextEditingController();
+    final speciesCtrl = TextEditingController(text: 'Native Fauna');
+    final photoUrlCtrl = TextEditingController();
+    String behaviorType = 'horse_rope';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return DefaultTabController(
+              length: 2,
+              child: Container(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 20,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                ),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.pets_rounded, color: Colors.brown),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Add Native Animal (Real-Life Photo)',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const TabBar(
+                      labelColor: Colors.brown,
+                      unselectedLabelColor: Colors.grey,
+                      indicatorColor: Colors.brown,
+                      tabs: [
+                        Tab(icon: Icon(Icons.photo_camera, size: 18), text: 'Real Photo Upload'),
+                        Tab(icon: Icon(Icons.pets, size: 18), text: 'Fauna Presets'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          // Tab 1: Real-Life Photo Custom Animal
+                          SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                TextFormField(
+                                  controller: nameCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Animal Name (e.g. Abyssinian Horse, Shepherd Dog)',
+                                    prefixIcon: Icon(Icons.title),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                TextFormField(
+                                  controller: speciesCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Species / Classification',
+                                    prefixIcon: Icon(Icons.science),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                TextFormField(
+                                  controller: photoUrlCtrl,
+                                  decoration: InputDecoration(
+                                    labelText: 'Real Photo URL (http:// or https://)',
+                                    hintText: 'https://.../real_animal_photo.png',
+                                    prefixIcon: const Icon(Icons.image),
+                                    suffixIcon: IconButton(
+                                      icon: const Icon(Icons.photo_library),
+                                      tooltip: 'Pick from Gallery',
+                                      onPressed: () async {
+                                        final picker = ImagePicker();
+                                        final picked = await picker.pickImage(source: ImageSource.gallery);
+                                        if (picked != null) {
+                                          photoUrlCtrl.text = picked.path;
+                                          setModalState(() {});
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  onChanged: (_) => setModalState(() {}),
+                                ),
+                                const SizedBox(height: 8),
+                                if (photoUrlCtrl.text.isNotEmpty)
+                                  Container(
+                                    height: 120,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: Colors.brown.shade200),
+                                      color: Colors.grey.shade100,
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: photoUrlCtrl.text.startsWith('http')
+                                        ? Image.network(photoUrlCtrl.text, fit: BoxFit.contain)
+                                        : const Center(child: Icon(Icons.pets, size: 48, color: Colors.brown)),
+                                  ),
+                                const SizedBox(height: 10),
+                                DropdownButtonFormField<String>(
+                                  value: behaviorType,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Real-Life Character Behavior',
+                                    prefixIcon: Icon(Icons.psychology),
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: 'horse_rope',
+                                      child: Text('🐎 Horse with Reins Rope (Held by User)'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'barking_dog',
+                                      child: Text('🐕 Guard Dog that Barks at Camera'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'ambient_wildlife',
+                                      child: Text('🏔️ Highland Wildlife (Standing/Perched)'),
+                                    ),
+                                  ],
+                                  onChanged: (val) {
+                                    if (val != null) setModalState(() => behaviorType = val);
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.brown,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  onPressed: () {
+                                    final name = nameCtrl.text.trim();
+                                    final photo = photoUrlCtrl.text.trim();
+                                    if (name.isEmpty) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Please enter an animal name.')),
+                                      );
+                                      return;
+                                    }
+                                    final customAnimal = NativeAnimal(
+                                      id: 'animal_${DateTime.now().millisecondsSinceEpoch}',
+                                      name: name,
+                                      species: speciesCtrl.text.trim().isNotEmpty ? speciesCtrl.text.trim() : 'Fauna',
+                                      previewUrl: photo.isNotEmpty ? photo : NativeAnimal.defaultPresets.first.previewUrl,
+                                      modelUrl: photo,
+                                      behaviorType: behaviorType,
+                                      behaviorDescription: behaviorType == 'horse_rope'
+                                          ? 'Real-life horse with interactive lead rope connected to user in AR'
+                                          : (behaviorType == 'barking_dog'
+                                              ? 'Real-life guard dog barking at camera'
+                                              : 'Highland endemic animal beside tourist'),
+                                      defaultScale: behaviorType == 'horse_rope' ? 1.1 : 0.8,
+                                    );
+                                    setState(() {
+                                      _selectedAnimals.add(customAnimal);
+                                    });
+                                    Navigator.pop(ctx);
+                                  },
+                                  icon: const Icon(Icons.add_photo_alternate),
+                                  label: const Text('Add Real-Life Photo Animal'),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Tab 2: Fauna Presets
+                          ListView.separated(
+                            itemCount: NativeAnimal.defaultPresets.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (_, index) {
+                              final preset = NativeAnimal.defaultPresets[index];
+                              final isAlreadyAdded = _selectedAnimals.any((a) => a.id == preset.id);
+
+                              return ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: CircleAvatar(
+                                  backgroundImage: NetworkImage(preset.previewUrl),
+                                ),
+                                title: Text(preset.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                subtitle: Text('${preset.species} • Real photo', style: const TextStyle(fontSize: 11)),
+                                trailing: isAlreadyAdded
+                                    ? const Chip(label: Text('Added', style: TextStyle(fontSize: 10)))
+                                    : ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.brown,
+                                          foregroundColor: Colors.white,
+                                        ),
+                                        onPressed: () {
+                                          setState(() => _selectedAnimals.add(preset));
+                                          Navigator.pop(ctx);
+                                        },
+                                        child: const Text('Add'),
+                                      ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -295,6 +778,214 @@ class _AddLandmarkPageState extends State<AddLandmarkPage> {
                     }).toList(),
                   ),
                 ),
+                SizedBox(height: isMobile ? 14 : 16),
+                // ── 3D View of the Site Section ─────────────────────────────
+                Row(
+                  children: [
+                    const Icon(Icons.view_in_ar_rounded, color: Colors.indigo, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      '3D View of the Site',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Provide a 3D model (.glb) so tourists can inspect and place the heritage site in real-world AR.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                SizedBox(height: isMobile ? 6 : 8),
+                TextFormField(
+                  controller: _site3dModelUrlController,
+                  decoration: InputDecoration(
+                    labelText: '3D Site Model URL (.glb / .gltf)',
+                    hintText: 'https://.../model.glb',
+                    prefixIcon: const Icon(Icons.threed_rotation),
+                    suffixIcon: _site3dModelUrlController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () => setState(() => _site3dModelUrlController.clear()),
+                          )
+                        : null,
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                SizedBox(height: isMobile ? 4 : 6),
+                const Text('Or choose a heritage 3D model preset:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                SizedBox(height: isMobile ? 4 : 6),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _sample3DModels.map((sample) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ActionChip(
+                          avatar: const Icon(Icons.architecture, size: 16),
+                          label: Text(sample['title']!, style: const TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            setState(() {
+                              _site3dModelUrlController.text = sample['url']!;
+                            });
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+
+                SizedBox(height: isMobile ? 16 : 20),
+                // ── Cultural Clothes & Attire Section ────────────────────────
+                Row(
+                  children: [
+                    const Icon(Icons.checkroom_rounded, color: Colors.deepOrange, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Cultural Clothes (AR Dress-Up)',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _showAddAttireDialog,
+                      icon: const Icon(Icons.add_circle_outline, size: 16),
+                      label: const Text('Add Clothes', style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
+                const Text(
+                  'When tourists take selfies/photos at this site, they can wear these cultural clothes (Snapchat-style AR lenses).',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                if (_selectedAttires.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.shade200),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.amber, size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'No cultural clothes added. Tap "+ Add Clothes" to add regional attires.',
+                            style: TextStyle(fontSize: 12, color: Colors.black87),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _selectedAttires.map((attire) {
+                      return Chip(
+                        avatar: const CircleAvatar(
+                          backgroundColor: Colors.deepOrange,
+                          child: Icon(Icons.checkroom, size: 12, color: Colors.white),
+                        ),
+                        label: Text('${attire.name} (${attire.region})', style: const TextStyle(fontSize: 12)),
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                        onDeleted: () {
+                          setState(() {
+                            _selectedAttires.remove(attire);
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+                SizedBox(height: isMobile ? 16 : 20),
+                // ── Native Animals & Character Section ───────────────────────
+                Row(
+                  children: [
+                    const Icon(Icons.pets_rounded, color: Colors.brown, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Native Animals & Real-Life AR Companions',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _showAddAnimalDialog,
+                      icon: const Icon(Icons.add_circle_outline, size: 16),
+                      label: const Text('Add Animal', style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
+                const Text(
+                  'When taking photos/videos, the user can stand beside the animal in AR with its real-life behavior (e.g. horse with lead rope, barking guard dog, mountain ibex).',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                if (_selectedAnimals.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.brown.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.brown.shade200),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.brown, size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'No animals added. Tap "+ Add Animal" to attach native wildlife or companions.',
+                            style: TextStyle(fontSize: 12, color: Colors.black87),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Column(
+                    children: _selectedAnimals.map((animal) {
+                      String behaviorBadge = animal.behaviorType == 'horse_rope'
+                          ? '🐎 Lead Rope Reins'
+                          : (animal.behaviorType == 'barking_dog'
+                              ? '🐕 Guard Dog Bark'
+                              : '🏔️ High Altitude Wildlife');
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        elevation: 0.5,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        child: ListTile(
+                          dense: true,
+                          leading: const CircleAvatar(
+                            backgroundColor: Colors.brown,
+                            child: Icon(Icons.pets, size: 14, color: Colors.white),
+                          ),
+                          title: Text(animal.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          subtitle: Text(
+                            '$behaviorBadge • ${animal.species}\n${animal.behaviorDescription}',
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                          ),
+                          isThreeLine: true,
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                            onPressed: () {
+                              setState(() {
+                                _selectedAnimals.remove(animal);
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+
                 SizedBox(height: isMobile ? 14 : 16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,

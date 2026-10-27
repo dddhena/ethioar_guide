@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/landmark.dart';
 import '../../theme/ethio_theme.dart';
 import '../../widgets/navigation/ar_camera_background_view.dart';
+import '../ar/cultural_ar_camera_page.dart';
 
 class ArAttractionExperiencePage extends StatefulWidget {
   final String attractionName;
@@ -537,15 +538,14 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
                           foregroundColor: Colors.white,
                         ),
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('3D Historical Reconstitution Model loaded in spatial memory!'),
-                              backgroundColor: EthioColors.forest,
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => CulturalArCameraPage(initialLandmark: widget.landmark),
                             ),
                           );
                         },
-                        icon: const Icon(Icons.threed_rotation_rounded, size: 18),
-                        label: const Text('View 3D Model'),
+                        icon: const Icon(Icons.auto_awesome, size: 18),
+                        label: const Text('AR Cultural Lens'),
                       ),
                     ),
                   ],

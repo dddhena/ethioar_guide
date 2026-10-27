@@ -184,6 +184,9 @@ class FirestoreService {
     String category = 'heritage',
     String imageUrl = '',
     double entranceFee = 0.0,
+    String site3dModelUrl = '',
+    List<CulturalAttire> culturalAttires = const [],
+    List<NativeAnimal> nativeAnimals = const [],
   }) async {
     await _db.collection('landmarks').add({
       'name': name.trim(),
@@ -194,6 +197,9 @@ class FirestoreService {
       'category': category.trim(),
       'imageUrl': imageUrl,
       'entranceFee': entranceFee,
+      'site3dModelUrl': site3dModelUrl.trim(),
+      'culturalAttires': culturalAttires.map((a) => a.toMap()).toList(),
+      'nativeAnimals': nativeAnimals.map((a) => a.toMap()).toList(),
       'rating': 4.0,
       'reviewCount': 0,
       'outdoorFriendly': true,
@@ -219,6 +225,9 @@ class FirestoreService {
     List<String>? bestWeatherConditions,
     double? popularityScore,
     double? entranceFee,
+    String? site3dModelUrl,
+    List<CulturalAttire>? culturalAttires,
+    List<NativeAnimal>? nativeAnimals,
   }) async {
     final Map<String, Object?> data = {};
     if (name != null) data['name'] = name.trim();
@@ -234,6 +243,13 @@ class FirestoreService {
     if (bestWeatherConditions != null) data['bestWeatherConditions'] = bestWeatherConditions;
     if (popularityScore != null) data['popularityScore'] = popularityScore;
     if (entranceFee != null) data['entranceFee'] = entranceFee;
+    if (site3dModelUrl != null) data['site3dModelUrl'] = site3dModelUrl.trim();
+    if (culturalAttires != null) {
+      data['culturalAttires'] = culturalAttires.map((a) => a.toMap()).toList();
+    }
+    if (nativeAnimals != null) {
+      data['nativeAnimals'] = nativeAnimals.map((a) => a.toMap()).toList();
+    }
 
     if (data.isEmpty) return;
     await _db.collection('landmarks').doc(id).update(data);

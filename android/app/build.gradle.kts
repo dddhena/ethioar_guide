@@ -50,3 +50,7 @@ flutter {
 configurations.all {
     exclude(group = "com.android.support")
 }
+
+dependencies {
+    implementation("androidx.concurrent:concurrent-futures:1.2.0")
+}

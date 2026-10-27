@@ -2,8 +2,10 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../models/heritage_3d_landmark.dart';
+import '../../models/landmark.dart';
 import '../../theme/ethio_theme.dart';
 import '../ar_guide.dart';
+import 'cultural_ar_camera_page.dart';
 
 class Heritage3DExplorerPage extends StatefulWidget {
   final Heritage3DLandmark? initialLandmark;
@@ -70,7 +72,19 @@ class _Heritage3DExplorerPageState extends State<Heritage3DExplorerPage>
 
   void _openARSurfacePlacement() {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ARGuidePage()),
+      MaterialPageRoute(
+        builder: (_) => CulturalArCameraPage(
+          initialLandmark: Landmark(
+            id: _currentLandmark.id,
+            name: _currentLandmark.name,
+            description: _currentLandmark.description,
+            latitude: 0,
+            longitude: 0,
+            city: _currentLandmark.location,
+            site3dModelUrl: _currentLandmark.glbModelUrl,
+          ),
+        ),
+      ),
     );
   }
 
