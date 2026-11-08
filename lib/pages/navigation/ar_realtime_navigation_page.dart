@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../models/landmark.dart';
 import '../../models/pedestrian_detected_object.dart';
+import '../../services/audio_narration_service.dart';
 import '../../services/location_service.dart';
 import '../../services/pedestrian_vision_service.dart';
 import '../../services/routing_service.dart';
@@ -40,6 +41,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
     with SingleTickerProviderStateMixin {
   final RoutingService _routingService = RoutingService();
   final PedestrianVisionService _visionService = PedestrianVisionService();
+  final AudioNarrationService _audioService = AudioNarrationService();
 
   late RouteResult _currentRoute;
   late LatLng _currentGpsPosition;
@@ -103,6 +105,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
     _simulatedGpsTimer?.cancel();
     _visionSubscription?.cancel();
     _visionService.stopVisionScanning();
+    _audioService.stop();
     _cameraController?.dispose();
     _arPulseController.dispose();
     super.dispose();
@@ -148,6 +151,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
         if (isCentered && !_isAimingAtTargetDoor) {
           _isAimingAtTargetDoor = true;
           HapticFeedback.selectionClick();
+          _audioService.speakNavigationPrompt('Target entrance doorway aligned. Walk straight through entrance.');
         } else if (!isCentered) {
           _isAimingAtTargetDoor = false;
         }
@@ -156,8 +160,10 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
       // 2. Obstacle Alert: Alert if an obstacle or low barrier is detected within 3 meters
       final obstacles = objects.where((o) => o.type == PedestrianObjectType.obstacle && o.distanceMeters <= 3.0).toList();
       if (obstacles.isNotEmpty && _obstacleWarning == null) {
-        setState(() => _obstacleWarning = obstacles.first.actionGuidance);
+        final alertText = obstacles.first.actionGuidance;
+        setState(() => _obstacleWarning = alertText);
         HapticFeedback.heavyImpact();
+        _audioService.speakNavigationPrompt('Caution: $alertText. Watch your step.');
         Future.delayed(const Duration(seconds: 4), () {
           if (mounted) setState(() => _obstacleWarning = null);
         });
@@ -336,6 +342,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
       _isWrongDirection = false;
       _dynamicManeuver = ManeuverType.uTurn;
       _dynamicInstruction = 'Move backward / Make a U-turn';
+      _audioService.speakNavigationPrompt(_dynamicInstruction, force: true);
       return;
     }
 
@@ -345,6 +352,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
       _isMoveBackward = false;
       _dynamicManeuver = ManeuverType.wrongDirection;
       _dynamicInstruction = 'Wrong direction! Turn around';
+      _audioService.speakNavigationPrompt(_dynamicInstruction, force: true);
       return;
     }
 
@@ -362,6 +370,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
       _lastTurnedJunctionIndex = stepIdx;
       _dynamicManeuver = currentStep.maneuverType;
       _dynamicInstruction = 'NOW: ${currentStep.instruction}';
+      _audioService.speakNavigationPrompt(_dynamicInstruction, force: true);
       return;
     }
 
@@ -370,6 +379,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
       _hasTriggeredTurnNow = false;
       _dynamicManeuver = currentStep.maneuverType;
       _dynamicInstruction = 'In ${distToStep.round()}m, ${currentStep.instruction.toLowerCase()}';
+      _audioService.speakNavigationPrompt(_dynamicInstruction);
       return;
     }
 
@@ -377,6 +387,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
     _hasTriggeredTurnNow = false;
     _dynamicManeuver = currentStep.maneuverType;
     _dynamicInstruction = currentStep.instruction;
+    _audioService.speakNavigationPrompt(_dynamicInstruction);
   }
 
   void _checkRouteDeviation(LatLng current) {
@@ -679,7 +690,7 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
     final etaMins = math.max(1, (_remainingDistanceMeters / (widget.travelMode == TravelMode.driving ? 9.7 : 1.3) / 60).round());
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.82),
         borderRadius: BorderRadius.circular(20),
@@ -697,48 +708,87 @@ class _ArRealtimeNavigationPageState extends State<ArRealtimeNavigationPage>
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: EthioColors.forest,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
+              // 1. Left Status Pill (Flexible with overflow protection)
+              Flexible(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.camera_alt_rounded, size: 12, color: Colors.white),
-                    SizedBox(width: 4),
-                    Text(
-                      'PEDESTRIAN AR WAYFINDING',
-                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: EthioColors.forest,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.camera_alt_rounded, size: 11, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text(
+                            'AR NAV',
+                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+                          ),
+                        ],
+                      ),
                     ),
+                    if (_hasTriggeredTurnNow) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.amberAccent,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'TURN NOW',
+                          style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              const Spacer(),
-              if (_hasTriggeredTurnNow)
-                Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.amberAccent,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    'TURN NOW',
-                    style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.w900),
-                  ),
-                ),
-              Text(
-                'ETA: $etaMins min',
-                style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 13),
-              ),
+
               const SizedBox(width: 8),
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
-                onPressed: () => Navigator.of(context).pop(),
+
+              // 2. Right Action Cluster: ETA + Voice Mute + Close Button (Compact & responsive)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'ETA $etaMins min',
+                      style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 11),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => setState(() => _audioService.toggleMute()),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        _audioService.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                        color: _audioService.isMuted ? Colors.white38 : Colors.greenAccent,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => Navigator.of(context).pop(),
+                    child: const Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

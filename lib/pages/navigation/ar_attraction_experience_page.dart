@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/landmark.dart';
+import '../../services/audio_narration_service.dart';
 import '../../theme/ethio_theme.dart';
 import '../../widgets/navigation/ar_camera_background_view.dart';
 import '../ar/cultural_ar_camera_page.dart';
@@ -23,10 +24,12 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Audio narration state
+  // Real Audio narration state powered by AudioNarrationService
+  final AudioNarrationService _audioService = AudioNarrationService();
+  StreamSubscription<NarrationVoiceState>? _voiceStateSub;
+  StreamSubscription<double>? _voiceProgressSub;
   bool _isPlayingAudio = false;
   double _audioProgress = 0.0;
-  Timer? _audioTimer;
 
   // AR Marker Scanner state
   bool _isScanning = false;
@@ -78,36 +81,49 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+
+    _voiceStateSub = _audioService.stateStream.listen((state) {
+      if (mounted) {
+        setState(() => _isPlayingAudio = state == NarrationVoiceState.playing);
+      }
+    });
+
+    _voiceProgressSub = _audioService.progressStream.listen((progress) {
+      if (mounted) {
+        setState(() => _audioProgress = progress);
+      }
+    });
   }
 
   @override
   void dispose() {
-    _audioTimer?.cancel();
+    _voiceStateSub?.cancel();
+    _voiceProgressSub?.cancel();
+    _audioService.stop();
     _tabController.dispose();
     super.dispose();
   }
 
-  void _toggleAudio() {
-    if (_isPlayingAudio) {
-      _audioTimer?.cancel();
-      setState(() => _isPlayingAudio = false);
-    } else {
-      setState(() => _isPlayingAudio = true);
-      _audioTimer = Timer.periodic(const Duration(milliseconds: 200), (t) {
-        if (!mounted) {
-          t.cancel();
-          return;
-        }
-        setState(() {
-          _audioProgress += 0.01;
-          if (_audioProgress >= 1.0) {
-            _audioProgress = 0.0;
-            _isPlayingAudio = false;
-            t.cancel();
-          }
-        });
-      });
+  String get _audioScriptText {
+    final lm = widget.landmark;
+    if (lm != null && lm.description.isNotEmpty) {
+      return 'Welcome to ${widget.attractionName}. ${lm.description}. Located in ${lm.city.isNotEmpty ? lm.city : "Ethiopia"}, this heritage destination represents centuries of extraordinary craftsmanship, spiritual devotion, and cultural resilience.';
     }
+    return 'Welcome to ${widget.attractionName}. This UNESCO World Heritage site is an extraordinary fortress complex constructed in the 17th century by Emperor Fasilides. It features six royal castles, banquet halls, libraries, and ancient stone ramparts reflecting Ethiopia\'s golden architectural era.';
+  }
+
+  void _toggleAudio() async {
+    if (_isPlayingAudio) {
+      await _audioService.pause();
+    } else {
+      await _audioService.speakStory(_audioScriptText);
+    }
+  }
+
+  void _restartAudio() async {
+    await _audioService.stop();
+    setState(() => _audioProgress = 0.0);
+    await _audioService.speakStory(_audioScriptText);
   }
 
   void _simulateScan() {
@@ -360,7 +376,7 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
   Widget _buildAudioGuideTab() {
     return Center(
       child: Container(
-        constraints: const dynamicConstraints(maxWidth: 480),
+        constraints: const BoxConstraints(maxWidth: 480),
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -436,19 +452,67 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
             ),
             const SizedBox(height: 24),
 
-            // Audio Play/Pause Button
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: EthioColors.forest,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            // Audio Play/Pause & Restart Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: EthioColors.forest,
+                    side: const BorderSide(color: EthioColors.forest),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  onPressed: _restartAudio,
+                  icon: const Icon(Icons.replay_rounded, size: 20),
+                  label: const Text('Restart', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: EthioColors.forest,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  onPressed: _toggleAudio,
+                  icon: Icon(_isPlayingAudio ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 26),
+                  label: Text(
+                    _isPlayingAudio ? 'Pause' : 'Play Narration',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Transcript Read-Along Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: EthioColors.divider),
               ),
-              onPressed: _toggleAudio,
-              icon: Icon(_isPlayingAudio ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 28),
-              label: Text(
-                _isPlayingAudio ? 'Pause Narration' : 'Listen to Audio Tour',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.article_rounded, size: 16, color: EthioColors.forest),
+                      SizedBox(width: 6),
+                      Text(
+                        'AUDIO TRANSCRIPT',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: EthioColors.muted, letterSpacing: 0.8),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _audioScriptText,
+                    style: const TextStyle(fontSize: 13, height: 1.5, color: EthioColors.charcoal),
+                  ),
+                ],
               ),
             ),
           ],
@@ -689,8 +753,4 @@ class _ArAttractionExperiencePageState extends State<ArAttractionExperiencePage>
       },
     );
   }
-}
-
-class dynamicConstraints extends BoxConstraints {
-  const dynamicConstraints({super.maxWidth});
 }
