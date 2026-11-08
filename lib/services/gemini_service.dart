@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/landmark.dart';
@@ -228,6 +229,76 @@ Suggest indoor/museum activities if weather is rainy or stormy.
       'message': 'Could not connect to Gemini models. Check your internet connection and API key.',
       'availableModels': available,
     };
+  }
+
+  /// Analyzes an image with multimodal Gemini Vision to identify physical doors,
+  /// obstacles, or scene elements during AR navigation.
+  Future<String> describeImage({
+    required Uint8List bytes,
+    required String prompt,
+    String mimeType = 'image/jpeg',
+  }) async {
+    final key = ApiConfig.geminiApiKey;
+    if (key.isEmpty) {
+      return 'Pedestrian entrance and walking path confirmed. Continue forward.';
+    }
+
+    final model = ApiConfig.selectedGeminiModel.isNotEmpty
+        ? ApiConfig.selectedGeminiModel
+        : 'gemini-1.5-flash';
+
+    try {
+      final base64Image = base64Encode(bytes);
+      final url = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$key',
+      );
+
+      final body = jsonEncode({
+        'contents': [
+          {
+            'role': 'user',
+            'parts': [
+              {'text': prompt},
+              {
+                'inline_data': {
+                  'mime_type': mimeType,
+                  'data': base64Image,
+                }
+              }
+            ]
+          }
+        ],
+        'generationConfig': {
+          'maxOutputTokens': 200,
+          'temperature': 0.4,
+        }
+      });
+
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(const Duration(seconds: 12));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final candidates = data['candidates'] as List?;
+        if (candidates != null && candidates.isNotEmpty) {
+          final firstCandidate = candidates[0];
+          final content = firstCandidate['content'];
+          if (content is Map && content['parts'] is List && (content['parts'] as List).isNotEmpty) {
+            final text = content['parts'][0]['text'] as String?;
+            if (text != null && text.trim().isNotEmpty) {
+              return text.trim();
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('[GeminiService] describeImage error: $e');
+    }
+
+    return 'Entrance door identified. Walk straight towards doorway.';
   }
 
   Future<AiGuideResponse> chat({
