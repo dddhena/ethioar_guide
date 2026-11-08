@@ -29,6 +29,8 @@ void main() {
 }
 
 class MyApp extends StatefulWidget {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   const MyApp({super.key});
 
   @override
@@ -54,6 +56,7 @@ class _MyAppState extends State<MyApp> {
       listenable: _themeService,
       builder: (context, child) {
         return MaterialApp(
+          navigatorKey: MyApp.navigatorKey,
           title: 'EthioAR Guide',
           theme: buildEthioTheme(),
           darkTheme: buildEthioDarkTheme(),

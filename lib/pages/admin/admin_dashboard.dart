@@ -4,6 +4,8 @@ import '../../services/auth_service.dart';
 import '../../services/session_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/emergency_service.dart';
+import '../../services/admin_emergency_monitor_service.dart';
+import '../../main.dart';
 import '../../services/payment_service.dart';
 import '../../models/emergency_alert.dart';
 import '../../models/payment.dart';
@@ -54,6 +56,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   void initState() {
     super.initState();
+    AdminEmergencyMonitorService().startMonitoring(MyApp.navigatorKey);
     _loadStatistics();
   }
   
